@@ -1,0 +1,191 @@
+body{
+    /* background: #dcdcdc; */
+}
+
+
+/* 그림자 */
+.shadow{
+    box-shadow: 0px 2px 10px 0px rgb(221, 221, 221);
+    border-radius:5px;
+}
+
+/* 테두리 곡선 */
+.radius{
+    border-radius:3px;
+    overflow: hidden;
+}
+
+
+/* ir용 글자 숨김처리 */
+.blind{
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip: rect(0 0 0 0);
+    overflow: hidden;
+}
+
+
+/* 모바일 */
+.mobile{
+    display: none;
+}
+@media (max-width:767px){
+    .mobile{
+        display: initial;
+    }
+}
+
+
+
+/* 툴팁용 글자 css 초기화 */
+font{
+    font-size: inherit;
+    color: inherit;
+}
+
+
+/* wrapper기본설정 */
+.wrapper{
+    width: 1300px;
+    margin: 0 auto;
+    /* position: relative; */
+    margin-bottom: 150px;
+}
+
+
+/* 폰트크기 */
+*{
+    font-size: 16px;
+}
+
+
+
+/* 악세서리 및 장비칸 배경 색상 */
+.ultra-background{
+    background: linear-gradient(135deg,#3d3325,#dcc999);
+}
+.rare-background{
+    background: linear-gradient(135deg,#341a09,#a24006);
+}
+.common-background{
+    background: linear-gradient(135deg,#362003,#9e5f04);
+}
+.hero-background{
+    background: linear-gradient(135deg,#27013d,#6e00aa)
+}
+
+
+/* 악세서리 및 장비 품질(하단) 바 색상 */
+.common-progressbar{
+    background:#a80000
+}
+.uncommon-progressbar{
+    background:#ffd000ce
+}
+.rare-progressbar{
+    background:#00a808
+}
+.epic-progressbar{
+    background:#4671ff
+}
+.legendary-progressbar{
+    background:#7a13be
+}
+.relics-progressbar{
+    background:#ff00ea
+}
+.mythic-progressbar{ 
+    background:#ecc515
+}
+
+
+
+/* 각인 아이콘 is */
+.engraving-ico{
+    background: url("../image/img_engrave_icon.png");
+    background-repeat:no-repeat;
+    background-position-x:1px;
+    margin-right: 3px;
+}
+.engraving-ico.blue{background-position-x:1px;} 
+.engraving-ico.red{background-position-x:-27px;}
+.engraving-ico.yellow{background-position-x:-57px}
+.engraving-ico.puple{background-position-x:-86px}
+.engraving-ico.orange{background-position-x:-115px}
+.engraving-ico.unknown{display: none;}
+
+
+/* 로딩 아이콘 */
+.loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    animation: spin 2s linear infinite;
+    position: absolute;
+    left: calc(50% - 60px);
+    top: -30px;
+
+
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+
+
+
+
+@media (max-width:1027px){
+    .wrapper{
+        width:initial;
+    }
+}
+
+
+/* 악세서리영역 상중하 색상 */
+.quality.high,
+.quality.DuelPhigh,
+.quality.Duelhigh,
+.quality.DuelLhigh,
+.quality.SpPhigh,
+.quality.SpMhigh,
+.quality.SpLhigh,
+.quality.Sphigh,
+.quality.zhigh,
+.quality.Phigh,
+.quality.Lhigh{
+    background: #ecc515;
+}
+.quality.middle,
+.quality.DuelPmiddle,
+.quality.Duelmiddle,
+.quality.DuelLmiddle,
+.quality.SpPmiddle,
+.quality.SpMmiddle,
+.quality.SpLmiddle,
+.quality.Sphigh,
+.quality.zmiddle,
+.quality.Spmiddle,
+.quality.Pmiddle,
+.quality.Lmiddle{
+    background: rgb(122, 19, 190);
+}
+.quality.low,
+.quality.DuelPlow,
+.quality.Duellow,
+.quality.DuelLlow,
+.quality.SpPlow,
+.quality.SpMlow,
+.quality.SpLlow,
+.quality.Splow,
+.quality.zlow,
+.quality.Splow,
+.quality.Plow,
+.quality.Llow{
+    background: #4671ff;
+}

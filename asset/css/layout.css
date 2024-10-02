@@ -1,0 +1,190 @@
+@import url(./common.css);
+@import url(./reset.css);
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap');
+
+/* 기본 레이아웃 스타일 */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 콘텐츠 래퍼 스타일 */
+.content-wrapper {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 페이지 콘텐츠 스타일 */
+.page-content {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* 헤더 스타일 */
+.sc-header {
+    width: 100%;
+    height: 60px;
+    background: rgb(236, 236, 236);
+    display: flex;
+    align-items: center;
+    padding: 0 50px;
+}
+
+.sc-header .logo-group {
+    width: calc(100%/3);
+}
+
+.sc-header .logo-group .logo {
+    width: 200px;
+    height: 60px;
+    display: block;
+}
+
+.sc-header .logo-group .link-site {
+    display: block;
+    background: url("../image/logo.png") center center no-repeat;
+    background-size: contain;
+    width: 100%;
+    height: 100%;
+}
+
+.sc-header .group-search {
+    width: calc(100%/3);
+    display: flex;
+    justify-content: center;
+}
+
+.sc-header .header-input.on {
+    display: block;
+}
+
+.sc-header .header-input {
+    width: 500px;
+    height: 40px;
+    padding-left: 40px;
+    font-size: 18px;
+    border: none;
+    border-radius: 50px;
+    outline: none;
+    display: none;
+    margin: 0 auto;
+}
+
+.sc-header .group-sns {
+    width: calc(100%/3);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.sc-header .group-sns .sns-ico {
+    height: 40px;
+    width: 40px;
+    object-fit: cover;
+    border-radius:50px;
+}
+
+/* 푸터 스타일 */
+.sc-footer {
+    width: 100%;
+    text-align: center;
+    background: rgb(233, 233, 233);
+    font-size: 13px;
+    padding: 5px 0;
+    margin-top: auto; /* footer를 아래로 밀어냄 */
+}
+
+.sc-footer span {
+    font-weight: 400;
+    color: #747474;
+}
+
+/* 메인 페이지 특정 스타일 */
+body.home .content-wrapper {
+    justify-content: space-between;
+}
+
+body.home .page-content {
+    flex: 0 0 auto;
+}
+
+
+
+
+
+
+
+
+@media (max-width:1027px){
+    .sc-header{
+        height: 40px;
+        padding: 0 10px;
+        justify-content: space-between;
+    }
+
+
+
+    .sc-header .logo-group{
+        width: 25%;
+        height: 40px;
+    }
+    .sc-header .logo-group .logo{
+        width: 120px;
+        height: 100%;
+        display: block;
+    }
+
+
+
+
+    .sc-header .group-search{
+        width: 50%;
+        display: none;
+    }
+
+
+
+
+    .sc-header .group-sns{
+        width: 25%;
+        gap: 5px;
+    }
+    .sc-header .group-sns .link-sns{
+    }
+    .sc-header .group-sns .link-sns img{
+        width: 25px;
+        height: 25px;
+    }
+}
+
+
+
+@media (max-width: 768px) {
+    .sc-header {
+        padding: 0 20px;
+    }
+
+    .sc-header .header-input {
+        width: 100%;
+    }
+
+    .sc-header .group-sns {
+        justify-content: center;
+    }
+}
+
+
+
+
+
