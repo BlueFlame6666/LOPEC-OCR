@@ -361,6 +361,9 @@
     justify-content: center;
     gap:5px;
 }
+.sc-info .armor-area .armor-item:last-child .text-box .name-wrap{
+    font-size: 13px;
+}
 .sc-info .armor-area .img-box{
     width: 42px;
     position: relative;

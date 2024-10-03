@@ -93,7 +93,7 @@ font{
     background:#7a13be
 }
 .relics-progressbar{
-    background:#ff00ea
+    background:#d63f24
 }
 .mythic-progressbar{ 
     background:#ecc515
@@ -188,4 +188,12 @@ font{
 .quality.Plow,
 .quality.Llow{
     background: #4671ff;
+}
+
+
+
+
+/* 스켈레톤 배경색상 */
+.skeleton{
+    background: #ccc;
 }

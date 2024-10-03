@@ -2,6 +2,7 @@ import {
     keywordList,
     grindingFilter,
     arkFilter,
+    bangleJobFilter,
     engravingImg,
     dealerAccessoryFilter,
     elixirFilter,
@@ -119,6 +120,7 @@ async function getCharacterProfile(inputName){
         supportArkLeft(enlightenmentCheck)
         // console.log(enlightenmentArry)
 
+        // 직업명 단축이름 출력
         function supportCheck(){
             let arkResult =""
             try{
@@ -140,11 +142,51 @@ async function getCharacterProfile(inputName){
             }
             return arkResult
         }
-        // console.log(supportCheck())
+
+        // 직업명 풀네임 출력
+        function jobCheck(){
+            let arkResult =""
+            try{
+                arkFilter.forEach(function(arry){
+                    let arkInput = arry.split(":")[0];
+                    
+                    enlightenmentArry.forEach(function(supportCheckArry){
+                        if(supportCheckArry.includes(arkInput)){
+                            arkResult = arkInput
+                            return arkResult
+                        }
+                    })
+                })
+            }catch(err){
+                console.log(err)
+            }
+            return arkResult
+        }
+
+
+        // 3티어 서폿 구분
+        function supportLowTierCheck(){
+            let result = null
+            if(!(data.ArmoryEngraving == null) && !(data.ArmoryEngraving.Effects == null)){
+                data.ArmoryEngraving.Effects.forEach(function(engravingArry){
+                    let name = engravingArry.Name.replace(/Lv.*/, "").trim()
+                    bangleJobFilter.forEach(function(jobArry){
+                        if(name == jobArry.job && jobArry.class == "support"){
+                            result = "3티어 서폿"
+                            return result
+                        }
+                    })
+                })
+            }    
+            return result
+        }
+
+// Lieam
+        console.log(supportLowTierCheck())
 
         if(supportCheck() == "서폿"){
             
-        }else{
+        }else if(supportLowTierCheck() == "3티어 서폿"){
             
         }
 
@@ -206,17 +248,17 @@ async function getCharacterProfile(inputName){
                         weaponPoint = (weaponNum-50)*100
                     }else if(weaponNum >= 1580 && weaponNum < 1735){
                         // console.log("1580이상 1735미만")
-                        weaponPoint = 153000 + (weaponNum-1580)*900*4
+                        weaponPoint = 153000 + (weaponNum-1580)*800*4
                     }else if(weaponNum == 1735 && !(arry.Grade == "에스더")){
                         // console.log("레벨 1735 에스더 아님")
-                        weaponPoint = (153000 + (weaponNum-1580)*900*4)+30000
+                        weaponPoint = (153000 + (weaponNum-1580)*800*4)+30000
                     }else if(weaponNum >= 1735 && weaponNum <= 1764){
                         // console.log("1735이상 1764이하 에스더 등급")
-                        weaponPoint = (153000 + (weaponNum-1580)*900*4)+50000
+                        weaponPoint = (153000 + (weaponNum-1580)*800*4)+50000
                     }
                     else if(weaponNum >= 1765){
                         // console.log("weaponNum >= 1765")
-                        weaponPoint = (153000 + (weaponNum-1580)*900*4)+110000
+                        weaponPoint = (153000 + (weaponNum-1580)*800*4)+110000
                     }
 
                 }
@@ -250,7 +292,7 @@ async function getCharacterProfile(inputName){
                         armorPoint += ((weaponNum-50)*100)*0.2
                     }else if(weaponNum >= 1580){
                         // console.log("투구 1580이상")
-                        armorPoint += (153000 + (weaponNum-1580)*900*4)*0.16
+                        armorPoint += (153000 + (weaponNum-1580)*800*4)*0.16
                     }    
                 }else if(arry.Type == "상의"){
                     if(weaponNum < 1580){
@@ -258,7 +300,7 @@ async function getCharacterProfile(inputName){
                         armorPoint += ((weaponNum-50)*100)*0.2
                     }else if(weaponNum >= 1580){
                         // console.log("상의 1580이상")
-                        armorPoint += (153000 + (weaponNum-1580)*900*4)*0.16
+                        armorPoint += (153000 + (weaponNum-1580)*800*4)*0.16
                     }
                 }else if(arry.Type == "하의"){
                     if(weaponNum < 1580){
@@ -266,7 +308,7 @@ async function getCharacterProfile(inputName){
                         armorPoint += ((weaponNum-50)*100)*0.2
                     }else if(weaponNum >= 1580){
                         // console.log("하의 1580이상")
-                        armorPoint += (153000 + (weaponNum-1580)*900*4)*0.16
+                        armorPoint += (153000 + (weaponNum-1580)*800*4)*0.16
                     }
                 }else if(arry.Type == "장갑"){
                     if(weaponNum < 1580){
@@ -274,7 +316,7 @@ async function getCharacterProfile(inputName){
                         armorPoint += ((weaponNum-50)*100)*0.2
                     }else if(weaponNum >= 1580){
                         // console.log("장갑 1580이상")
-                        armorPoint += (153000 + (weaponNum-1580)*900*4)*0.16
+                        armorPoint += (153000 + (weaponNum-1580)*800*4)*0.16
                     }
                 }else if(arry.Type == "어깨"){
                     if(weaponNum < 1580){
@@ -282,7 +324,7 @@ async function getCharacterProfile(inputName){
                         armorPoint += ((weaponNum-50)*100)*0.2
                     }else if(weaponNum >= 1580){
                         // console.log("어깨 1580이상")
-                        armorPoint += (153000 + (weaponNum-1580)*900*4)*0.16
+                        armorPoint += (153000 + (weaponNum-1580)*800*4)*0.16
                     }
                 }
                 return armorPoint
@@ -300,29 +342,29 @@ async function getCharacterProfile(inputName){
 
         function arkBonus(arkArry,arkName){
             if(arkArry < 72 && arkName == "진화"){
-                return arkArry*200
+                return arkArry*500
             }else if(arkArry > 71 && arkArry < 84 && arkName == "진화"){
-                return arkArry*200 + 40000
+                return arkArry*600 + 50000
             }else if(arkArry < 96 && arkName == "진화"){
-                return arkArry*200 + 170000
+                return arkArry*600 + 180000
             }else if(arkArry < 108 && arkName == "진화"){
-                return arkArry*200 + 215000
+                return arkArry*600 + 225000
             }else if(arkArry < 120 && arkName == "진화"){
-                return arkArry*200 + 260000
+                return arkArry*600 + 270000
             }else if(arkArry < 999 && arkName == "진화"){
-                return arkArry*200 + 320000
+                return arkArry*600 + 330000
             }else if(arkArry < 80 && arkName == "깨달음"){
-                return arkArry*300
+                return arkArry*700
             }else if(arkArry > 79 && arkArry < 88 && arkName == "깨달음"){
-                return arkArry*300 + 270000
+                return arkArry*700 + 280000
             }else if(arkArry < 999 && arkName == "깨달음"){
-                return arkArry*300 + 320000
+                return arkArry*700 + 330000
             }else if(arkArry < 50 && arkName == "도약"){
-                return arkArry*600
+                return arkArry*800
             }else if(arkArry > 59 && arkName == "도약"){
-                return arkArry*600 + 47000
+                return arkArry*800 + 57000
             }else if(arkArry > 49 && arkName == "도약"){
-                return arkArry*600 + 32000
+                return arkArry*800 + 42000
             }
         }
 
@@ -543,23 +585,23 @@ async function getCharacterProfile(inputName){
 
         let doubleCheck = []
         let elixirFilterVal
-
-        if(supportCheck().trim() == "서폿"){ //서포터일 경우
+        // console.log(supportCheck())
+        if(supportCheck().trim() == "서폿"){ //4티어 서포터일 경우
             function elixirSupportVal(optionGrade,level){ // 옵션 분류명, 레벨
                 if((optionGrade == "DuelPub"|| optionGrade == "SupPub") && level == 5){
-                    return level*4000+7500
+                    return level*4000+1500
                 }else if(optionGrade == "Duelpub"){
                     return level*4000
                 }else if(optionGrade == "Sup1"&&level == 5){
-                    return level*10500+20000
+                    return level*10500+15000
                 }else if(optionGrade == "Sup1"){
                     return level*10500
                 }else if(optionGrade == "Sup2"&&level == 5){
-                    return level*5500+20000
+                    return level*5500+15000
                 }else if(optionGrade == "Sup2"){
                     return level*5500
                 }else if(optionGrade == "Sup3"&&level == 5){
-                    return level*9300+17500
+                    return level*9300+12500
                 }else if(optionGrade == "Sup3"){
                     return level*9300
                 }else{
@@ -569,21 +611,47 @@ async function getCharacterProfile(inputName){
 
             elixirFilterVal = elixirSupportVal
             doubleCheck = ["선각자","진군","신념"]
+            
+        }else if(supportLowTierCheck() == "3티어 서폿"){ //3티어 서폿일 경우
+            function elixirDealerVal(optionGrade,level){ // 옵션 분류명, 레벨
+                if((optionGrade == "DuelPub"|| optionGrade == "SupPub") && level == 5){
+                    return level*4000+1500
+                }else if(optionGrade == "Duelpub"){
+                    return level*4000
+                }else if(optionGrade == "Sup1"&&level == 5){
+                    return level*10500+15000
+                }else if(optionGrade == "Sup1"){
+                    return level*10500
+                }else if(optionGrade == "Sup2"&&level == 5){
+                    return level*5500+15000
+                }else if(optionGrade == "Sup2"){
+                    return level*5500
+                }else if(optionGrade == "Sup3"&&level == 5){
+                    return level*9300+12500
+                }else if(optionGrade == "Sup3"){
+                    return level*9300
+                }else{
+                    return 0
+                }
+            }
+            
+            elixirFilterVal = elixirDealerVal
+            doubleCheck = ["선각자","진군","신념"]
+            
         }else{ // 딜러일 경우 
-
             function elixirDealerVal(optionGrade,level){ // 옵션 분류명, 레벨
                 if((optionGrade == "pub"|| optionGrade == "DuelPub") && level == 5){
-                    return level*4000+7500
+                    return level*4000+1500
                 }else if(optionGrade == "pub"|| optionGrade == "DuelPub"){
                     return level*4000
                 }else if(optionGrade == "sp"){
                     return level*2500
                 }else if(optionGrade == "sp1"&&level == 5){
-                    return level*10500+20000
+                    return level*10500+15000
                 }else if(optionGrade == "sp1"){
                     return level*10500
                 }else if(optionGrade == "sp2"&&level == 5){
-                    return level*9300+17500
+                    return level*9300+12500
                 }else if(optionGrade == "sp2"){
                     return level*9300
                 }else{
@@ -599,7 +667,6 @@ async function getCharacterProfile(inputName){
 
         let elixirPoint = 0
         let elixirLevel = 0
-
 
 
 
@@ -619,7 +686,6 @@ async function getCharacterProfile(inputName){
                     elixirLevel += Number(arry.level)
                     elixirPoint += elixirFilterVal(filterArry.split(":")[1],arry.level)
                 }else{
-                    // console.log("asdasd")
                 }
             })
         })
@@ -632,11 +698,9 @@ async function getCharacterProfile(inputName){
             let count = data.filter(item => item.name.includes(doubleString)).length;
             return count === 2;
         }
-        // console.log(elixirData)
-
+        
         // console.log(containsTwoHoesim(elixirData)); // true
         doubleCheck.forEach(function(arry){
-            // console.log(elixirData,arry)
             if(containsTwoHoesim(elixirData,arry) && elixirLevel >= 50){
                 // console.log("레벨합계"+elixirLevel+"가산점 100000")
                 elixirPoint += 110000
@@ -754,7 +818,6 @@ async function getCharacterProfile(inputName){
             }
         })
 
-
         // 무기 20성 이상 가산점
         if(hyperWeaponLevel >= 20){
             hyperPoint += 53900
@@ -845,11 +908,11 @@ async function getCharacterProfile(inputName){
                     if(arry.AbilityStoneLevel == 1){
                         result += 10000
                     }else if(arry.AbilityStoneLevel == 2){
-                        result += 20000
+                        result += 15000
                     }else if(arry.AbilityStoneLevel == 3){
-                        result += 35000
+                        result += 25000
                     }else if(arry.AbilityStoneLevel == 4){
-                        result += 50000
+                        result += 30000
                     }
 
                     abilityLevel += arry.AbilityStoneLevel
@@ -858,13 +921,13 @@ async function getCharacterProfile(inputName){
             return result
         }
         if(abilityLevel >= 8){
-            abilityStonePoint += 60000
+            abilityStonePoint += 50000
         }else if(abilityLevel >= 7){
-            abilityStonePoint += 40000
-        }else if(abilityLevel >= 6){
             abilityStonePoint += 30000
-        }else if(abilityLevel >= 5){
+        }else if(abilityLevel >= 6){
             abilityStonePoint += 20000
+        }else if(abilityLevel >= 5){
+            abilityStonePoint += 10000
         }
 
         // console.log(abilityStonePoint)
@@ -878,10 +941,11 @@ async function getCharacterProfile(inputName){
         let bangleOptionArry = [];
         let bangeleStatsUse = [];
         let statsPercent = 0
+        let bangleSpecialStats = ["힘","민첩","지능"]
 
         let filterTierCheck
 
-        if(supportCheck().trim() == "서폿"){ //서포터일 경우
+        if(supportCheck().trim() == "서폿" || supportLowTierCheck() == "3티어 서폿"){ //서포터일 경우
             function bangleSupportPoint(tier){
                 // 접두사 z = 무효 / Sp = 서폿용 / P = 더 높은 점수 / L = 낮은 점수 /
                 if(false){banglePoint += 0}
@@ -930,6 +994,8 @@ async function getCharacterProfile(inputName){
             bangeleStatsUse = ["치명", "특화", "신속"];
             statsPercent = 290
         }
+
+
 
 
 
@@ -1009,18 +1075,89 @@ async function getCharacterProfile(inputName){
                         banglePoint += statsNumber*statsPercent
 
                     }
-    
-
                 });
                 
 
+
+                
+                bangleSpecialStats.forEach(function(statsArry){
+                    let regex = new RegExp(`${statsArry} \\+\\d+`);
+                    if(regex.test(arry)){
+                        let val = arry.replace(/\D/g, '')
+                        // console.log(val)
+                        // console.log(Math.round(bangleSpStats(val)))
+                        banglePoint += Math.round(bangleJobSpStats(val)) //3티어 힘민지 점수
+                        banglePoint += Math.round(bangleSpStats(val)) //4티어 힘민지 점수
+                    }
+                });
+                
+                // 직업별 힘,민첩,지능 점수     
+                function bangleSpStats(spStatsVal){
+                    let result = 0
+                    bangleJobFilter.forEach(function(jobArry){
+                        
+                        if(jobCheck() == jobArry.job && jobArry.tier == 4){
+                            let pow = (jobArry.option == "pow")
+                            let dex = (jobArry.option == "dex")
+                            let int = (jobArry.option == "int")
+                            if(pow){
+                                console.log(spStatsVal)
+                                result = spStatsVal*1.5
+                            }else if(dex){
+                                result = spStatsVal*1.5
+                            }else if(int){
+                                result = spStatsVal*1.5
+                            }else{
+                                result = 0
+                            }
+                        }else{
+                            result = 0
+                        }
+                    })
+                    return result
+
+                }
             })
+
+        }
+        
+        
+        // 3티어 캐릭터 힘,민첩,지능 팔찌점수
+        function bangleJobSpStats(spStatsVal){
+            if(!(data.ArmoryEngraving == null)&& !(data.ArmoryEngraving.Effects == null)){
+                let flag = 0;
+                let result = 0
+                data.ArmoryEngraving.Effects.forEach(function(engravingArry){
+                    let name = engravingArry.Name.replace(/Lv.*/, "").trim()
+                    bangleJobFilter.forEach(function(jobArry){
+                        if(name == jobArry.job && jobArry.tier == 3 && flag == 0){
+                            flag += 1
+                            // console.log("각인 직업 : "+jobArry.job)
+                            let pow = (jobArry.option == "pow")
+                            let dex = (jobArry.option == "dex")
+                            let int = (jobArry.option == "int")
+                            if(pow){
+                                result = spStatsVal*1.5
+                            }else if(dex){
+                                result = spStatsVal*1.5
+                            }else if(int){
+                                result = spStatsVal*1.5
+                            }else{
+                                result = 0
+                            }
+                        }else{
+                            result += 0
+                        }
+                    })
+                })
+                return result
+            }else {
+                return 0;
+            }
         }
 
-        
 
         // console.log("팔찌점수:"+banglePoint)
-
 
 
 
@@ -1602,7 +1739,7 @@ async function getCharacterProfile(inputName){
 
         let armorEmpty = `
         <li class="armor-item">
-            <div class="img-box radius">
+            <div class="img-box radius skeleton">
                 <img src="./asset/image/skeleton-img.png" alt="정보를 불러오지 못함">
             </div>
             <div class="text-box">
@@ -1681,12 +1818,109 @@ async function getCharacterProfile(inputName){
 
 
 
+        // 장비 최하단 초월 엘릭서 요약 표시
+
+        let elixirDouble = ["회심","달인 (","강맹","칼날방패","선봉대","행운","선각자","진군","신념"]
+        let elixirDoubleVal
+
+        function elixirDoubleCheck(){
+            let result
+            elixirDouble.forEach(function(elixirDoubleArry){
+                result = elixirData.filter(item => item.name.includes(elixirDoubleArry)).length;
+                if(result >= 2){
+                    elixirDoubleVal = elixirDoubleArry
+                }else{
+                }
+            })
+        }
+        elixirDoubleCheck()
+
+
+        function nameWrap(){
+            if(!(elixirDoubleVal == undefined) && elixirLevel >= 35 && elixirLevel < 40){
+                return `
+                    <div class="name-wrap">
+                        ${elixirDoubleVal.replace(/\(/g, "").trim()} 1단계
+                    </div>`
+            }else if(!(elixirDoubleVal == undefined) && elixirLevel >= 40){
+                return `
+                    <div class="name-wrap">
+                        ${elixirDoubleVal.replace(/\(/g, "").trim()} 2단계
+                    </div>`
+    
+            }else{
+                return `
+                    <div class="name-wrap">
+                        비활성화
+                    </div>`
+            }    
+        }
+
+        
+        let hyperSum = hyperWeaponLevel+hyperArmoryLevel
+
+        function elixirProgressGrade(){
+            if(elixirLevel < 35){
+                return "common"
+            }else if(elixirLevel < 40){
+                return "epic"
+            }else if(elixirLevel < 50){
+                return "legendary"
+            }else if(elixirLevel < 999){
+                return "mythic"
+            }
+        }
+        
+        function hyperProgressGrade(){
+            if(hyperSum < 100){
+                return "common"
+            }else if(hyperSum < 120){
+                return "epic"
+            }else if(hyperSum < 126){
+                return "legendary"
+            }else if(hyperSum < 999){
+                return "mythic"
+            }
+        }
+
+
+        let armorEtc = `
+            <li class="armor-item">
+                <div class="img-box radius ultra-background">
+                    <img src="./asset/image/elixir.png" alt="">
+                    <span class="progress ${elixirProgressGrade()}-progressbar">${elixirLevel}</span>
+                </div>
+                <div class="text-box">
+                    <div class="name-wrap">
+                        엘릭서
+                    </div>
+                    ${nameWrap()}
+                </div>
+                <div class="img-box radius ultra-background">
+                    <img src="./asset/image/hyper.png" alt="">
+                    <span class="progress ${hyperProgressGrade()}-progressbar">${hyperSum}</span>
+                </div>
+                <div class="text-box">
+                    <div class="name-wrap">
+                        초월
+                    </div>
+                    <div class="name-wrap">
+                        평균 ${(hyperSum/6).toFixed(1)}단계
+                    </div>
+                </div>
+            </li>`
+        ;
+
+
+
+
+
         // 장신구
 
         // 부위별 장신구 확인
         let accessoryEmpty = `
         <li class="accessory-item">
-            <div class="img-box radius">
+            <div class="img-box radius skeleton">
                 <img src="./asset/image/skeleton-img.png" alt="">
             </div>
             <div class="option-box">
@@ -1855,7 +2089,6 @@ async function getCharacterProfile(inputName){
         // 팔찌 HTML
 
         let bangleStats = ["치명","특화","신속","제압","인내","숙련"]
-        let bangleSpecialStats = ["힘","민첩","지능"]
         let bangleOptionWrap = "" //.option-wrap
         let bangleOption = "" //.option
         let bangleTmlWrap = "" //.grinding-wrap
@@ -1914,12 +2147,14 @@ async function getCharacterProfile(inputName){
                         tml = "중", tmlClass ="middle"
                     }else if(val > 14080 && val <= 16000){
                         tml = "상", tmlClass ="high"
+                    }else if(val >= 0){
+                        tml = "하", tmlClass ="low"
                     }
                     console.log()
                     bangleTmlWrap += `
                     <div class="grinding-wrap">
-                        <span class="quality high">
-                            특
+                        <span class="quality ${tmlClass}">
+                            ${tml}
                         </span>
                         <span class="option">
                             ${optionArry}
@@ -2100,6 +2335,7 @@ async function getCharacterProfile(inputName){
                     ${equipmentCheck("하의")}
                     ${equipmentCheck("장갑")}
                     ${equipmentCheck("무기")}
+                    ${armorEtc}
                 </ul>
             </div>
             <div class="accessory-area shadow">
