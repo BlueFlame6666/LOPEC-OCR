@@ -181,8 +181,6 @@ async function getCharacterProfile(inputName){
             return result
         }
 
-// Lieam
-        console.log(supportLowTierCheck())
 
         if(supportCheck() == "서폿"){
             
@@ -1040,7 +1038,7 @@ async function getCharacterProfile(inputName){
                 }            
             }
         }
-        // console.log(bangleOptionArry)
+        console.log(bangleOptionArry)
 
 
         function bangleArryFnc(bangleArry){
@@ -1473,7 +1471,7 @@ async function getCharacterProfile(inputName){
         // group-info HTML
         let groupInfo = 
         `<div class="group-info">
-            <div class="spec-area shadow">
+            <div class="spec-area shadow minimum flag">
                 <p class="title">스펙 포인트</p>
                 <div class="tier-box">
                     <img src="${gradeIco}" alt="">
@@ -1905,7 +1903,7 @@ async function getCharacterProfile(inputName){
                         초월
                     </div>
                     <div class="name-wrap">
-                        평균 ${(hyperSum/6).toFixed(1)}단계
+                        평균 ${(hyperSum/6).toFixed(1)}성
                     </div>
                 </div>
             </li>`
@@ -2138,7 +2136,6 @@ async function getCharacterProfile(inputName){
             // 특수 스텟 표시
             bangleSpecialStats.forEach(function(specialStatsArry){
                 let regex = new RegExp(`${specialStatsArry} \\+\\d+`);
-                
                 if(regex.test(optionArry)){
                     let tml ="", tmlClass ="", val = optionArry.replace(/\D/g, '')
                     if(val >= 6400 && val <= 12160){
@@ -2176,9 +2173,10 @@ async function getCharacterProfile(inputName){
 
             // 문장형 옵션 표시
             bangleFilter.forEach(function(filterArry){
-                if(optionArry == filterArry.name && bangleOptionArry[optionIndex+1] == filterArry.option){
+                let bangleCheck = optionArry == filterArry.name && bangleOptionArry[optionIndex+1] == filterArry.option
+                // console.log(optionArry)
+                if(bangleCheck && filterArry.secondCheck == null){
 
-                    
                     bangleTmlWrap += `
                     <div class="grinding-wrap">
                         <span class="quality ${filterArry.tier.replace(/[0-9]/g, '')}">
@@ -2213,6 +2211,23 @@ async function getCharacterProfile(inputName){
                     </div>
                     `;
 
+                }else if(bangleCheck && !(bangleOptionArry[optionIndex+2] == filterArry.secondCheck)){
+                    bangleTmlWrap += `
+                    <div class="grinding-wrap">
+                        <span class="quality ${filterArry.tier.replace(/[0-9]/g, '')}">
+                            ${bangleTierCheck(filterArry.tier)}
+                        </span>
+                        <span class="option">
+                            ${bangleFilterInitialCheck(filterArry.initial,filterArry.option)}
+                        </span>
+                    </div>
+                    `;
+        
+                    bangleTextbox = `
+                    <div class="text-box">
+                        ${bangleTmlWrap}
+                    </div>
+                    `;
                 }
 
             })
@@ -2220,7 +2235,7 @@ async function getCharacterProfile(inputName){
 
 
         })
-        // console.log(bangleTextbox)
+        // console.log(bangleTmlWrap)
 
         function bangleFilterNullCheck(option){
             if(!(option == null)){
@@ -2449,6 +2464,10 @@ async function getCharacterProfile(inputName){
 
 
 
+
+
+                    
+
         // 모바일 검색영역
 
         
@@ -2543,9 +2562,12 @@ async function getCharacterProfile(inputName){
         
         // 최종 HTML렌더어링
         document.getElementById("sc-info").innerHTML = scInfoHtml
-        
-      
-        
+
+
+
+
+        // 자식요소 minimum 부모 자동추가
+        minimumFnc()
 
         // 스펙포인트 on/off 버튼 실행
         specBtn()
@@ -2585,7 +2607,7 @@ mainInput.addEventListener("keydown",function(e){
         setTimeout(function() {
             getCharacterProfile("nick-name");
             loadingFlag = 0;
-            console.log(loadingFlag)
+            // console.log(loadingFlag)
         }, 1000);
 
     }
@@ -2625,7 +2647,7 @@ mobileInput.addEventListener("keydown",function(e){
 
 
 // 헤더 입력 필드에 이벤트 리스너 추가
-headerInput.addEventListener("keydown", handleSearch);
+// headerInput.addEventListener("keydown", handleSearch);
 
 
 
@@ -2653,5 +2675,36 @@ function specBtn(){
         }
     })    
 }
+
+
+
+// 자식 minimum 클래스 부모 자동 추가
+
+
+function minimumFnc(){
+    let childElements = document.querySelectorAll('.minimum');
+    let allChild = document.querySelector('.minimum.flag').querySelectorAll('*');
+    // console.log(allChild)
+    allChild.forEach(function(allChildArry){
+        allChildArry.classList.add('minimum');
+    })
+
+    childElements.forEach(function(childArry){
+
+
+        let parent = childArry.parentElement;
+    
+        while (parent) {
+            parent.classList.add('minimum');
+            parent = parent.parentElement; // 상위 부모 요소로 이동합니다.
+        }
+    
+    })    
+}
+window.onload = minimumFnc()
+
+
+
+
 
 // export{getCharacterProfile}

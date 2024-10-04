@@ -409,7 +409,8 @@ let elixirFilter = [
     "> 행운 :sp", 
     "> 강맹 :sp", 
     "> 칼날방패 :sp", 
-    "> 선봉대 :sp", 
+    "> 선봉대 (질서) :sp1",
+    "> 선봉대 (혼돈) :sp1",
     "> 선각자 (질서) :Sup1", 
     "> 선각자 (혼돈) :Sup1", 
     "> 진군 (질서) :Sup2", 
@@ -466,6 +467,7 @@ let cardPointFilter = [
 
 // 접두사 [딜러 : z = 무효 / P = 1티어 옵션 / L = 3티어 옵션 / DuelP = 1티어지만 서폿과 공용 옵션 / Duel = 2티어지만 서폿과 공용 옵션 / DuelL = 3티어지만 서폿과 공용 옵션] 
 //        [서폿 : SpP = 1티어 옵션 / SpM =  2티어 옵션 / SpL = 3티어 옵션 / Sp = 4티어 옵션 / Duel = 딜러와 공용 옵션]
+//        secondCheck의 경우 secondCheck명이 없는 경우 출력되도록 한다
 let bangleFilter = [
     { name: "공격 및 이동 속도가", option: "3%", tier: "Llow1", initial: "공이속 +3%"},
     { name: "공격 및 이동 속도가", option: "4%", tier: "Llow2", initial: "공이속 +4%"},
@@ -479,14 +481,14 @@ let bangleFilter = [
     { name: "치명타 피해가", option: "6.8%", tier: "Plow2", initial: "치피 +6.8% | 치명타시 주는 피해 +1.5%"},
     { name: "치명타 피해가", option: "8.4%", tier: "Pmiddle", initial: "치피 +8.4% | 치명타시 주는 피해 +1.5%"},
     { name: "치명타 피해가", option: "10%", tier: "Phigh", initial: "치피 +10.0% | 치명타시 주는 피해 +1.5%"},
-    { name: "적에게 주는 피해가", option: "1.5%", tier: "low1", initial: "적에게 주는 피해 +1.5%"},
-    { name: "적에게 주는 피해가", option: "2%", tier: "low2", initial: "적에게 주는 피해 +2%"},
-    { name: "적에게 주는 피해가", option: "2.5%", tier: "middle", initial: "적에게 주는 피해 +2.5%"},
-    { name: "적에게 주는 피해가", option: "3%", tier: "high", initial: "적에게 주는 피해 +3%"},
-    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "3.5%", tier: "low1", initial: "적주피 +1.5% | 무력화 상태에게 피해량 +3.5%"},
-    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "4%", tier: "low2", initial: "적주피 +2% | 무력화 상태에게 피해량 +4%"},
-    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "4.5%", tier: "middle", initial: "적주피 +2.5% | 무력화 상태에게 피해량 +4.5%"},
-    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "5%", tier: "high", initial: "적주피 +3% | 무력화 상태에게 피해량 +5%"},
+    { name: "적에게 주는 피해가", option: "1.5%", tier: "low1", initial: "적에게 주는 피해 +1.5%",secondCheck:"증가하며, 무력화 상태의 적에게 주는 피해가"},
+    { name: "적에게 주는 피해가", option: "2%", tier: "low2", initial: "적에게 주는 피해 +2%",secondCheck:"증가하며, 무력화 상태의 적에게 주는 피해가"},
+    { name: "적에게 주는 피해가", option: "2.5%", tier: "middle", initial: "적에게 주는 피해 +2.5%",secondCheck:"증가하며, 무력화 상태의 적에게 주는 피해가"},
+    { name: "적에게 주는 피해가", option: "3%", tier: "high", initial: "적에게 주는 피해 +3%",secondCheck:"증가하며, 무력화 상태의 적에게 주는 피해가"},
+    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "3.5%", tier: "zlow1", initial: "적주피 +1.5% | 무력화 적에게 피해량 +3.5%"},
+    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "4%", tier: "zlow2", initial: "적주피 +2% | 무력화 적에게 피해량 +4%"},
+    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "4.5%", tier: "zmiddle", initial: "적주피 +2.5% | 무력화 적에게 피해량 +4.5%"},
+    { name: "증가하며, 무력화 상태의 적에게 주는 피해가", option: "5%", tier: "zhigh", initial: "적주피 +3% | 무력화 적에게 피해량 +5%"},
     { name: "증가하지만, 적에게 주는 피해가", option: "4%", tier: "Plow1", initial: "쿨타임 +2% | 적에게 주는 피해 +4.0%"},
     { name: "증가하지만, 적에게 주는 피해가", option: "4.5%", tier: "Plow2", initial: "쿨타임 +2% | 적에게 주는 피해 +4.5%"},
     { name: "증가하지만, 적에게 주는 피해가", option: "5%", tier: "Pmiddle", initial: "쿨타임 +2% | 적에게 주는 피해 +5.0%"},
