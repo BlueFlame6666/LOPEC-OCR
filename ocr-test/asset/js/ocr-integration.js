@@ -1,8 +1,9 @@
 // OCR 통합 모듈
-import { getCharacterProfile, highTierSpecPointObj } from './spec-point.js';
+// spec-point.js 의존성 제거
+// const { getCharacterProfile, highTierSpecPointObj } = window;
 
 // OCR 사이드바 통합 모듈
-const OCRIntegration = (function() {
+window.OCRIntegration = (function() {
     // 특정 캐릭터의 API 호출을 제한하는 플래그 객체
     const processingCharacters = new Set();
     // 캐릭터 결과 캐시
@@ -23,6 +24,10 @@ const OCRIntegration = (function() {
 
     // OCR 기능 초기화
     function initializeOCR() {
+        // spec-point.js 의존성 제거
+        // const getCharacterProfile = window.getCharacterProfile;
+        // const highTierSpecPointObj = window.highTierSpecPointObj;
+        
         // OCR 시작 버튼 클릭 이벤트
         document.getElementById('startOcrBtn').addEventListener('click', async function() {
             await startOCRProcess();
@@ -193,89 +198,33 @@ const OCRIntegration = (function() {
         ocrStatus.textContent = `${totalCharacters}개 캐릭터 정보 조회 완료 (${totalTime}초 소요)`;
     }
     
-    // 캐릭터 데이터 가져오기 - 순차 처리 최적화
+    // 캐릭터 데이터 가져오기 - characterRead.js 활용
     function fetchCharacterData(nickname, cell) {
         return new Promise((resolve, reject) => {
             // 캐시에 결과가 있는지 확인
             if (resultCache[nickname]) {
-                console.log(`${nickname} 캐시된 결과 사용`);
                 cell.textContent = resultCache[nickname].toLocaleString();
                 resolve();
                 return;
             }
             
-            console.log(`${nickname} 데이터 요청 시작`);
-            cell.textContent = "조회 중...";
-            
-            // 최대 재시도 횟수
-            const maxRetries = 2;
-            let retryCount = 0;
-            
-            function attemptFetch() {
-                // API 호출 시작
-                getCharacterProfile(nickname, function(result) {
-                    try {
-                        if (result && result.highTierSpecPointObj && result.highTierSpecPointObj.completeSpecPoint > 0) {
-                            // API 응답이 유효할 경우
-                            const specPoint = result.highTierSpecPointObj.completeSpecPoint;
-                            cell.textContent = specPoint.toLocaleString();
-                            resultCache[nickname] = specPoint; // 결과 캐싱
-                            resolve();
-                        } else if (highTierSpecPointObj && highTierSpecPointObj.completeSpecPoint > 0) {
-                            // 전역 변수 결과 사용
-                            const specPoint = highTierSpecPointObj.completeSpecPoint;
-                            cell.textContent = specPoint.toLocaleString();
-                            resultCache[nickname] = specPoint; // 결과 캐싱
-                            resolve();
-                        } else if (retryCount < maxRetries) {
-                            // 재시도
-                            retryCount++;
-                            cell.textContent = `재시도 중... (${retryCount}/${maxRetries})`;
-                            console.log(`${nickname} 재시도 ${retryCount}/${maxRetries}`);
-                            
-                            // 재시도 전 충분한 대기 시간 설정
-                            setTimeout(attemptFetch, 800);
-                        } else {
-                            // 최대 재시도 횟수 초과
-                            cell.textContent = "정보 없음";
-                            console.log(`${nickname} 최대 재시도 횟수 초과`);
-                            resolve(); // 오류로 처리하지 않고 다음으로 진행
-                        }
-                    } catch (error) {
-                        console.error(`${nickname} 결과 처리 중 오류:`, error);
-                        if (retryCount < maxRetries) {
-                            // 오류 발생 시 재시도
-                            retryCount++;
-                            cell.textContent = `재시도 중... (${retryCount}/${maxRetries})`;
-                            setTimeout(attemptFetch, 800);
-                        } else {
-                            cell.textContent = "처리 오류";
-                            resolve(); // 오류로 처리하지 않고 다음으로 진행
-                        }
+            // characterRead.js의 함수 사용
+            window.characterReadModule.getLopecCharacterBest(nickname)
+                .then(response => {
+                    if (response && response.result === "S" && response.data) {
+                        const specPoint = response.data.LCHB_TOTALSUM || 0;
+                        cell.textContent = specPoint > 0 ? specPoint.toLocaleString() : "정보 없음";
+                        resultCache[nickname] = specPoint;
+                    } else {
+                        cell.textContent = "정보 없음";
                     }
+                    resolve();
+                })
+                .catch(error => {
+                    console.error(`${nickname} DB 조회 오류:`, error);
+                    cell.textContent = "DB 오류";
+                    resolve(); // 오류가 있어도 진행
                 });
-                
-                // 타임아웃 설정 (6초)
-                setTimeout(() => {
-                    if (cell.textContent === "조회 중..." || cell.textContent.includes("재시도 중")) {
-                        if (retryCount < maxRetries) {
-                            // 타임아웃 발생 시 재시도
-                            retryCount++;
-                            cell.textContent = `재시도 중... (${retryCount}/${maxRetries})`;
-                            console.log(`${nickname} 타임아웃으로 인한 재시도 ${retryCount}/${maxRetries}`);
-                            attemptFetch();
-                        } else {
-                            // 최대 재시도 횟수 초과
-                            cell.textContent = "시간 초과";
-                            console.log(`${nickname} 타임아웃 최대 재시도 횟수 초과`);
-                            resolve(); // 오류로 처리하지 않고 다음으로 진행
-                        }
-                    }
-                }, 6000);
-            }
-            
-            // 첫 번째 시도 시작
-            attemptFetch();
         });
     }
     
@@ -290,4 +239,6 @@ const OCRIntegration = (function() {
 // 페이지 로드 시 OCR 통합 모듈 초기화
 document.addEventListener('DOMContentLoaded', function() {
     OCRIntegration.init();
-}); 
+});
+
+console.log("OCRIntegration 모듈이 로드됨:", typeof OCRIntegration); 

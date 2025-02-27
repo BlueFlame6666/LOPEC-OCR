@@ -83,7 +83,7 @@
         // 정확히 index.php와 동일한 방식으로 스크립트 로드
         document.write('<script src="https://docs.opencv.org/4.5.5/opencv.js"><\/script>');
         document.write('<script src="asset/js/lopec-ocr.js?' + (new Date).getTime() + '"><\/script>');
-        document.write('<script type="module" src="asset/js/ocr-integration.js?' + (new Date).getTime() + '"><\/script>');
+        document.write('<script src="asset/js/ocr-integration.js?' + (new Date).getTime() + '"><\/script>');
         
         // OpenCV 로드 확인
         window.addEventListener('load', function() {

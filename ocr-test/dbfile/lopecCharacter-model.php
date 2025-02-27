@@ -724,7 +724,7 @@ class modelLopecCharacter extends coreUnion {
 	}
 	
 	/* **********************************************************************************************************************
-	 * function name		:	selectLopecCharacter
+	 * function name		:	selectLopecCharacterNickname
 	 * description			: 	LOPEC_CHARACTER   select
 	 * @param				:	$bindData	Array(id)
 	 * @return				: 	$retQuery	full query
@@ -740,6 +740,39 @@ class modelLopecCharacter extends coreUnion {
 			$logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectLopecCharacter - try~catch error : ".$e.getCode()." | ".$e.getMessage()." | ";
 			die($e->getMessage());
 		}
+		return $retQuery;
+	}
+	
+	/* **********************************************************************************************************************
+	 * function name		:	batchSelectLopecCharactersNickname
+	 * description			: 	LOPEC_CHARACTER 캐릭터 일괄 조회 (여러 닉네임으로 한 번에 조회)
+	 * @param				:	$nicknames	Array(닉네임 배열)
+	 * @return				: 	$retQuery	full query
+	 ********************************************************************************************************************** */
+	function batchSelectLopecCharactersNickname($nicknames = array()) {
+		$retQuery = "";
+		
+		try {
+			// 닉네임 배열이 비었거나 배열이 아닌 경우, 결과가 없는 쿼리 반환
+			if(empty($nicknames) || !is_array($nicknames)) {
+				return "SELECT LCHA_CHARACTER_NICKNAME, LCHA_CHARACTER_CLASS, LCHA_LEVEL, LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT 
+						FROM ".TN_LOPEC_CHARACTER." WHERE 1=0";
+			}
+			
+			// 플레이스홀더 생성 (닉네임 배열 길이만큼 '?' 생성)
+			$placeholders = implode(',', array_fill(0, count($nicknames), '?'));
+			
+			// 딜러/서폿 구분 없이 필요한 컬럼만 선택
+			$retQuery = 	"SELECT LCHA_CHARACTER_NICKNAME, LCHA_CHARACTER_CLASS, LCHA_LEVEL, 
+							LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT
+							FROM ".TN_LOPEC_CHARACTER." 
+							WHERE USE_TN = ? AND LCHA_CHARACTER_NICKNAME IN (".$placeholders.")
+							ORDER BY FIELD(LCHA_CHARACTER_NICKNAME, ".implode(',', array_fill(0, count($nicknames), '?')).")";
+		} catch (Exception $e) {
+			$retQuery = "";
+			$logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => batchSelectLopecCharactersNickname - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+		}
+		
 		return $retQuery;
 	}
 	

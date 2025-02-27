@@ -93,7 +93,7 @@ class controllerLopecCharacter extends coreProcess {
 	} // 
 	
 	/* **********************************************************************************************************************
-	 * function name		:	selectLopecCharacter
+	 * function name		:	selectLopecCharacterNickname
 	 * description			: 	BAS_BOARD select
 	 * @param				:	$bindData		Array(TN_USE)
 	 * @return				: 	$retResult		array data
@@ -668,6 +668,51 @@ function selectLopecCharacterRanking($rankingType = "DEAL") {
 		} catch (Exception $e) {
 			$retResult = "EE";
 			$logMsg = " | ".date("Y-m-d H:i:s")." | controllerUser => listLopecCharacter - try~catch error : ".$e.getCode()." | ".$e.getMessage()." | ";
+			die($e->getMessage());
+		}
+		return $retResult;
+	}
+	
+	/* **********************************************************************************************************************
+	 * function name		:	batchSelectLopecCharacters
+	 * description			: 	LOPEC_CHARACTER 여러 캐릭터 닉네임으로 일괄 조회
+	 * @param				:	$bindData		Array(TN_USE, array(닉네임들...))
+	 * @return				: 	$retResult		array data
+	 ********************************************************************************************************************** */
+	function batchSelectLopecCharacters($bindData = "") {
+		try {
+			// basic
+			$modelLopecCharacter = new modelLopecCharacter();
+			
+			// bindData 처리
+			if (empty($bindData) || !isset($bindData[1]) || !is_array($bindData[1])) {
+				return array(); // 빈 배열 반환
+			}
+			
+			$useTn = $bindData[0]; // TN_USE
+			$nicknames = $bindData[1]; // 닉네임 배열
+			
+			// 닉네임 배열이 비어있는 경우
+			if (empty($nicknames)) {
+				return array();
+			}
+			
+			// 실제 바인딩에 사용할 배열 구성 (USE_TN + 닉네임 배열 x2)
+			$execBindData = array($useTn);
+			foreach ($nicknames as $nickname) {
+				$execBindData[] = $nickname;
+			}
+			// ORDER BY FIELD 절에 사용하기 위해 닉네임 배열을 한번 더 추가
+			foreach ($nicknames as $nickname) {
+				$execBindData[] = $nickname;
+			}
+			
+			// 쿼리 실행 및 결과 반환
+			$query = $modelLopecCharacter->batchSelectLopecCharactersNickname($nicknames);
+			$retResult = $this->selectListBindPdo($query, $execBindData);
+		} catch (Exception $e) {
+			$retResult = "EE";
+			$logMsg = " | ".date("Y-m-d H:i:s")." | controllerLopecCharacter => batchSelectLopecCharacters - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
 			die($e->getMessage());
 		}
 		return $retResult;

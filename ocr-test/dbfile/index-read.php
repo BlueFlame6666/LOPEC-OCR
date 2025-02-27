@@ -124,6 +124,74 @@ try {
                 }
                 break;
 
+        case "batchQueryCharacters":
+            try {
+                // 닉네임 파라미터 확인
+                if (!isset($responseData["nicknames"]) || empty($responseData["nicknames"])) {
+                    $result = "F";
+                    $returnResult["error"] = "캐릭터 닉네임 목록이 필요합니다";
+                    error_log("일괄 캐릭터 조회 실패: 닉네임 목록 누락");
+                    break;
+                }
+                
+                // 닉네임 파라미터 처리 (JSON 문자열 또는 배열)
+                $nicknames = $responseData["nicknames"];
+                if (is_string($nicknames)) {
+                    // JSON 문자열인 경우 디코딩
+                    $decoded = json_decode($nicknames, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $nicknames = $decoded;
+                    } else {
+                        // 단일 닉네임 문자열인 경우 배열로 변환
+                        $nicknames = array($nicknames);
+                    }
+                }
+                
+                // 닉네임 배열 유효성 검사
+                if (!is_array($nicknames) || empty($nicknames)) {
+                    $result = "F";
+                    $returnResult["error"] = "유효한 캐릭터 닉네임 목록이 필요합니다";
+                    error_log("일괄 캐릭터 조회 실패: 유효하지 않은 닉네임 형식");
+                    break;
+                }
+                
+                // 요청 개수 제한 (최대 20개)
+                if (count($nicknames) > 20) {
+                    $nicknames = array_slice($nicknames, 0, 20);
+                    error_log("일괄 캐릭터 조회: 요청 개수 초과, 20개로 제한됨");
+                }
+                
+                // 닉네임 배열 정제 (중복 제거 및 빈 값 필터링)
+                $nicknames = array_values(array_filter(array_unique($nicknames), function($v) {
+                    return !empty(trim($v));
+                }));
+                
+                // 컨트롤러 호출
+                $bindData = array(TN_USE, $nicknames);
+                $charactersData = $controllerLopecCharacter->batchSelectLopecCharacters($bindData);
+                
+                if ($charactersData && !empty($charactersData)) {
+                    $result = "S";
+                    $data = $charactersData;
+                    
+                    // 검색 카운트 증가 (각 캐릭터별로)
+                    foreach ($charactersData as $character) {
+                        if (isset($character['LCHA_CHARACTER_NICKNAME'])) {
+                            $hitBindData = array($character['LCHA_CHARACTER_NICKNAME']);
+                            $controllerLopecCharacter->updateLopecCharacterHit($hitBindData);
+                        }
+                    }
+                } else {
+                    $result = "F";
+                    $returnResult["error"] = "캐릭터 정보를 찾을 수 없습니다";
+                    error_log("일괄 캐릭터 조회: 데이터 없음");
+                }
+            } catch (Exception $e) {
+                $result = "E";
+                error_log("일괄 캐릭터 조회 오류: " . $e->getMessage());
+            }
+            break;
+
         case "selectCharacterRanking":
             try {
                 error_log("캐릭터 랭킹 요청: " . $lchaCharacterNickname);
