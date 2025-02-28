@@ -718,5 +718,51 @@ function selectLopecCharacterRanking($rankingType = "DEAL") {
 		return $retResult;
 	}
 	
+	/* **********************************************************************************************************************
+	 * function name    : selectCombinedCharacterData
+	 * description     : 캐릭터의 여러 데이터를 한 번에 통합 조회 (최고 점수, 랭킹, 직업 랭킹, 백분율)
+	 * @param          : $characterNickname    String    - 캐릭터 닉네임
+	 * @param          : $rankingType         String    - 랭킹 타입 (DEAL/SUP)
+	 * @return         : $retResult           Array     - 통합 데이터
+	 ********************************************************************************************************************** */
+	function selectCombinedCharacterData($characterNickname = "", $rankingType = "DEAL") {
+	    try {
+	        // 유효성 검사
+	        if (empty($characterNickname)) {
+	            return null;
+	        }
+	        
+	        // 결과를 담을 배열 초기화
+	        $combinedResult = array();
+	        
+	        // 1. 캐릭터 최고 점수 정보 조회
+	        $bindData = Array(TN_USE, $characterNickname);
+	        $characterBestData = $this->selectLopecCharacterBest($bindData);
+	        $combinedResult['characterBest'] = $characterBestData ? $characterBestData : null;
+	        
+	        // 2. 특정 캐릭터의 랭킹 정보 조회
+	        $tableName = ($rankingType == "SUP") ? "LOPEC_CHARACTER_BEST_RANKING_SUP" : "LOPEC_CHARACTER_BEST_RANKING_DEAL";
+	        $rankingBindData = Array($characterNickname, $tableName);
+	        $characterRankingData = $this->selectSingleCharacterRanking($rankingBindData);
+	        $combinedResult['characterRanking'] = $characterRankingData ? $characterRankingData : null;
+	        
+	        // 3. 직업 내 랭킹 정보 조회 (baseClass 값은 characterBest에서 가져옴)
+	        $baseClass = "";
+	        if ($characterBestData && isset($characterBestData['LCHB_CHARACTER_CLASS'])) {
+	            $baseClass = $characterBestData['LCHB_CHARACTER_CLASS'];
+	        }
+	        $classRankingData = $this->selectClassRanking($rankingType, $baseClass);
+	        $combinedResult['classRanking'] = $classRankingData ? $classRankingData : null;
+	        
+	        // 4. 전체 랭킹 내 백분율 정보 조회
+	        $percentileData = $this->selectOverallRankingPercentile($characterNickname, $rankingType);
+	        $combinedResult['percentile'] = $percentileData ? $percentileData : null;
+	        
+	        return $combinedResult;
+	    } catch (Exception $e) {
+	        error_log("통합 데이터 조회 오류: " . $e->getMessage());
+	        return null;
+	    }
+	}
 }
 ?>

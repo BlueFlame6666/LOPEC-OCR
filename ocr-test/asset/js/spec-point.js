@@ -900,7 +900,7 @@ export function getCharacterProfile(inputName, callback) {
 
 
 
-            // 투구, 상의, 하의, 장갑, 어깨 힘민지 구하기
+            // 투구, 상의, 하의, 장갑, 어깨, 악세 힘민지 구하기
             function armorStatus() {
                 let result = 0;
                 data.ArmoryEquipment.forEach(function (armor) {
@@ -921,6 +921,7 @@ export function getCharacterProfile(inputName, callback) {
 
             }
 
+            console.log(hyperObj)
 
 
             // 각인
@@ -2133,6 +2134,7 @@ export function getCharacterProfile(inputName, callback) {
             //console.log("각인 케어력 : " + engObj.carePower)
             //console.log("악세 케어력 : " + accObj.carePower)
             //console.log("엘릭서 케어력 : " + elixirObj.carePower)
+            // console.log("엘릭서 : " , elixirObj)
 
 
 

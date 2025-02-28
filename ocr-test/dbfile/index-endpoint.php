@@ -285,6 +285,37 @@ try {
                 error_log("전체 백분율 조회 오류: " . $e->getMessage());
             }
             break;
+        case "selectCombinedCharacterData":
+            try {
+                // 필수 파라미터 검증
+                if(empty($lchaCharacterNickname)) {
+                    $result = "F";
+                    $returnResult["error"] = "캐릭터 닉네임이 필요합니다";
+                    error_log("통합 데이터 조회 실패: 캐릭터 닉네임 누락");
+                    break;
+                }
+                
+                // 랭킹 타입 검증 및 기본값 설정
+                if($rankingType != "SUP" && $rankingType != "DEAL") {
+                    $rankingType = "DEAL";
+                }
+                
+                // 통합 데이터 조회
+                $combinedData = $controllerLopecCharacter->selectCombinedCharacterData($lchaCharacterNickname, $rankingType);
+                
+                if($combinedData) {
+                    $result = "S";
+                    $data = $combinedData;
+                } else {
+                    $result = "F";
+                    $returnResult["error"] = "캐릭터 데이터를 찾을 수 없습니다";
+                    error_log("통합 데이터 조회 실패: 데이터 없음 - 캐릭터: " . $lchaCharacterNickname);
+                }
+            } catch (Exception $e) {
+                $result = "E";
+                error_log("통합 데이터 조회 오류: " . $e->getMessage());
+            }
+            break;
     }
 
     // process result
