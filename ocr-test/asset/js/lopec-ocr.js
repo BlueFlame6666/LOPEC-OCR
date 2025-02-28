@@ -1,31 +1,79 @@
 // lostark-ocr.js
+// ESM 스타일 import 구문
+import { getBatchCharacterData } from './characterRead.js';
+import { getCharacterProfile } from './spec-point.js';
+
+// IIFE 대신 변수에 할당
 const LopecOCR = (function() {
-    // API URL
+    // ===========================================================================================
+    // 설정 및 상수 정의
+    // ===========================================================================================
+    
+    // OCR API 엔드포인트
     const API_URL = 'https://api.upstage.ai/v1/document-ai/ocr';
     
-    // OCR 버전 정의
+    // OCR 버전 상수 정의
     const OCR_VERSIONS = {
-        APPLICANT: 'applicant', // 신청자 목록 (기존 version1)
+        APPLICANT: 'applicant',    // 신청자 목록 (기존 version1)
         PARTICIPANT: 'participant' // 참가자 목록 (새로운 version2)
     };
     
-    // 이미지 처리 관련 함수들
+    // ===========================================================================================
+    // 이미지 처리 관련 함수
+    // ===========================================================================================
+    
+    /**
+     * 클립보드에서 이미지를 가져오는 함수
+     * @returns {Promise<Blob>} 클립보드의 이미지 Blob
+     * @throws {Error} 클립보드 접근 관련 오류
+     */
     async function getImageFromClipboard() {
         try {
+            console.log("클립보드 접근 시도 중...");
+            
             // 클립보드 API 지원 여부 확인
-            if (!navigator.clipboard || !navigator.clipboard.read) {
+            if (!navigator.clipboard) {
+                console.error("navigator.clipboard 객체가 없음 - 브라우저 미지원");
                 throw new Error('현재 브라우저에서 클립보드 이미지 접근을 지원하지 않습니다. 크롬이나 엣지 브라우저를 사용해보세요.');
             }
             
-            const items = await navigator.clipboard.read();
+            if (!navigator.clipboard.read) {
+                console.error("navigator.clipboard.read 메소드가 없음 - 브라우저 미지원");
+                throw new Error('현재 브라우저에서 클립보드 읽기 기능을 지원하지 않습니다. 크롬이나 엣지 브라우저를 사용해보세요.');
+            }
+            
+            console.log("클립보드 API 지원 확인됨, 읽기 시도...");
+            
+            // 클립보드 읽기 시도
+            console.time('clipboardRead');
+            const items = await navigator.clipboard.read().catch(e => {
+                console.error("클립보드 읽기 실패:", e);
+                throw e;
+            });
+            console.timeEnd('clipboardRead');
+            console.log("클립보드 항목 수:", items.length);
+            
             for (const item of items) {
+                console.log("클립보드 항목 타입:", item.types);
                 if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
-                    const blob = await item.getType(item.types.find(type => type.startsWith('image/')));
-                    return blob;
+                    const imageType = item.types.find(type => type.startsWith('image/'));
+                    console.log("이미지 타입 발견:", imageType);
+                    
+                    try {
+                        const blob = await item.getType(imageType);
+                        console.log("이미지 블롭 가져옴:", blob.size, "바이트");
+                        return blob;
+                    } catch (e) {
+                        console.error("이미지 블롭 가져오기 실패:", e);
+                        throw e;
+                    }
                 }
             }
+            console.error("클립보드에 이미지 없음");
             throw new Error('클립보드에 이미지가 없습니다. Alt+PrtSc로 캡처 후 다시 시도해주세요.');
         } catch (error) {
+            console.error("클립보드 접근 오류:", error);
+            
             if (error.name === 'NotAllowedError') {
                 throw new Error('클립보드 접근 권한이 없습니다. 사이트 권한 설정을 확인해주세요.');
             } else if (error.name === 'SecurityError') {
@@ -35,7 +83,11 @@ const LopecOCR = (function() {
         }
     }
     
-    // 이미지 오른쪽 부분 크롭
+    /**
+     * 이미지 오른쪽 부분을 크롭하는 함수 (화면 비율에 따라 다르게 처리)
+     * @param {Image} img - 크롭할 이미지 객체
+     * @returns {Promise<ImageData>} 크롭된 이미지 데이터
+     */
     async function cropRightPartOfImage(img) {
         return new Promise((resolve, reject) => {
             try {
@@ -46,6 +98,7 @@ const LopecOCR = (function() {
                 let cropWidth;
                 const aspectRatio = img.width / img.height;
                 
+                // 화면 비율에 따라 크롭 영역 크기 조정
                 if (aspectRatio > 2.1) { // 21:9 이상의 울트라와이드
                     cropWidth = img.width * 0.6;
                 } else if (aspectRatio > 1.7) { // 16:9 모니터
@@ -71,7 +124,25 @@ const LopecOCR = (function() {
         });
     }
     
-    // ImageData를 Blob으로 변환
+    /**
+     * Blob를 Base64 문자열로 변환하는 함수
+     * @param {Blob} blob - 변환할 이미지 Blob
+     * @returns {Promise<string>} Base64 인코딩된 문자열
+     */
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+    
+    /**
+     * ImageData를 Blob으로 변환하는 함수
+     * @param {ImageData} imageData - 변환할 이미지 데이터
+     * @returns {Promise<Blob>} 변환된 이미지 Blob
+     */
     function imageDataToBlob(imageData) {
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
@@ -91,7 +162,11 @@ const LopecOCR = (function() {
         });
     }
     
-    // Blob에서 이미지 객체 생성
+    /**
+     * Blob에서 이미지 객체를 생성하는 함수
+     * @param {Blob} blob - 이미지 Blob
+     * @returns {Promise<Image>} 생성된 이미지 객체
+     */
     function createImageFromBlob(blob) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -101,22 +176,32 @@ const LopecOCR = (function() {
         });
     }
     
-    // OCR 결과에서 캐릭터 정보 추출 - 버전별 다른 정규식 패턴 사용
+    /**
+     * OCR 결과에서 캐릭터 정보를 추출하는 함수
+     * 버전별(신청자/참가자)로 다른 정규식 패턴 사용
+     * 
+     * @param {Object} ocrData - OCR API 결과 데이터
+     * @param {string} version - OCR 처리 버전 (APPLICANT 또는 PARTICIPANT)
+     * @param {Function|null} debug - 디버그 로그 콜백 함수
+     * @returns {Array} 추출된 캐릭터 정보 배열
+     */
     function extractCharacterInfo(ocrData, version = OCR_VERSIONS.APPLICANT, debug = null) {
         const characterResults = [];
         
         try {
+            // OCR 결과 유효성 검사
             if (!ocrData) {
                 console.error('OCR 결과가 비어있습니다', ocrData);
                 return characterResults;
             }
             
+            // OCR 텍스트 추출
             let allText = "";
             
             if (ocrData.text) {
                 allText = ocrData.text;
                 
-                // OCR 결과 텍스트를 디버그 로그에 추가
+                // 디버그 로그 기록
                 if (debug && typeof debug === 'function') {
                     debug(`OCR 응답 텍스트: ${allText.substring(0, 500)}${allText.length > 500 ? '...(길이 제한)' : ''}`);
                     debug(`전체 텍스트 길이: ${allText.length} 자`);
@@ -126,8 +211,11 @@ const LopecOCR = (function() {
                 return characterResults;
             }
             
+            // 버전별 처리 (신청자/참가자 구분)
             if (version === OCR_VERSIONS.APPLICANT) {
-                // 신청자 목록용 패턴 (기존 version1)
+                // ===========================================================================================
+                // 신청자 목록 처리 로직 (APPLICANT 버전)
+                // ===========================================================================================
                 const levelNicknamePattern = /\n\s*Lv[.,]?(\d+)\s+([^\s]+)/g;
                 const itemLevelPattern = /(\d{4}\.\d{2})\s+상세보기/g;
                 
@@ -136,7 +224,7 @@ const LopecOCR = (function() {
                 
                 // 디버그 정보 출력
                 if (debug && typeof debug === 'function') {
-                    debug(`버전: ${version}, 닉네임 매치 개수: ${nicknameMatches.length}, 아이템 레벨 매치 개수: ${itemLevelMatches.length}`);
+                    debug(`버전: ${version}, 닉네임 매치 개수: ${nicknameMatches.length}, 아이템 레벨 매치 개수: ${itemLevelMatches ? itemLevelMatches.length : 0}`);
                     
                     if (nicknameMatches.length > 0) {
                         debug(`닉네임 첫 매치: ${nicknameMatches[0][0]}, 레벨: ${nicknameMatches[0][1]}, 닉네임 부분: ${nicknameMatches[0][2]}`);
@@ -147,40 +235,33 @@ const LopecOCR = (function() {
                     }
                 }
                 
-                // 결과 배열 생성
-                if (nicknameMatches.length > 0 && itemLevelMatches && nicknameMatches.length === itemLevelMatches.length) {
-                    for (let i = 0; i < nicknameMatches.length; i++) {
-                        const nickname = nicknameMatches[i][2].split('\n')[0].trim().replace(/\s+/g, '');
-                        const itemLevel = itemLevelMatches[i][1];
-                        
-                        if (isValidNickname(nickname) && isValidItemLevel(itemLevel)) {
-                            characterResults.push({
-                                nickname: nickname,
-                                itemLevel: itemLevel
-                            });
-                        }
+                // 결과 배열 생성 - 매치 유효성 개선
+                const hasNicknames = nicknameMatches.length > 0;
+                const hasItemLevels = itemLevelMatches && itemLevelMatches.length > 0;
+                const isMatchCountEqual = hasNicknames && hasItemLevels && (nicknameMatches.length === itemLevelMatches.length);
+                
+                // 매치 상태 로깅
+                if (debug && typeof debug === 'function') {
+                    debug(`매치 상태: 닉네임 ${hasNicknames ? '있음' : '없음'}, 아이템레벨 ${hasItemLevels ? '있음' : '없음'}, 일치 ${isMatchCountEqual ? '일치함' : '불일치'}`);
+                }
+                
+                // 유효한 닉네임과 아이템 레벨 추출 (공통 로직)
+                const validNicknames = [];
+                const validItemLevels = [];
+                
+                // 닉네임 추출 및 검증
+                for (let i = 0; i < nicknameMatches.length; i++) {
+                    const nickname = nicknameMatches[i][2].split('\n')[0].trim().replace(/\s+/g, '');
+                    if (isValidNickname(nickname)) {
+                        validNicknames.push({
+                            nickname: nickname,
+                            index: i
+                        });
                     }
-                } else {
-                    // 매치 수가 다를 경우 최대한 많은 정보 추출 시도
-                    // 이전 로직 유지
-                    if (debug && typeof debug === 'function') {
-                        debug('닉네임과 아이템 레벨 매치 수가 일치하지 않음. 매칭 시도 중...');
-                    }
-                    
-                    // 유효한 닉네임 추출
-                    const validNicknames = [];
-                    for (let i = 0; i < nicknameMatches.length; i++) {
-                        const nickname = nicknameMatches[i][2].split('\n')[0].trim().replace(/\s+/g, '');
-                        if (isValidNickname(nickname)) {
-                            validNicknames.push({
-                                nickname: nickname,
-                                index: i
-                            });
-                        }
-                    }
-                    
-                    // 유효한 아이템 레벨 추출
-                    const validItemLevels = [];
+                }
+                
+                // 아이템 레벨 추출 및 검증
+                if (hasItemLevels) {
                     for (let i = 0; i < itemLevelMatches.length; i++) {
                         const itemLevel = itemLevelMatches[i][1];
                         if (isValidItemLevel(itemLevel)) {
@@ -190,9 +271,34 @@ const LopecOCR = (function() {
                             });
                         }
                     }
+                }
+                
+                // 디버그 정보 추가
+                if (debug && typeof debug === 'function') {
+                    debug(`유효한 닉네임 수: ${validNicknames.length}, 유효한 아이템 레벨 수: ${validItemLevels.length}`);
+                }
+                
+                // 최종 결과 생성 (일치 여부에 따라 다른 방식 사용)
+                if (isMatchCountEqual && validNicknames.length === validItemLevels.length) {
+                    // 인덱스가 정확히 일치하므로 직접 대응
+                    for (let i = 0; i < validNicknames.length; i++) {
+                        characterResults.push({
+                            nickname: validNicknames[i].nickname,
+                            itemLevel: validItemLevels[i].itemLevel
+                        });
+                    }
                     
-                    // 추출된 정보 중 더 적은 쪽 기준으로 매칭
+                    if (debug && typeof debug === 'function') {
+                        debug(`정확한 일치 매칭으로 ${validNicknames.length}개 캐릭터 추출 완료`);
+                    }
+                } else {
+                    // 매치 수가 다르거나 유효한 항목 수가 다른 경우 최적 매칭 시도
                     const minLength = Math.min(validNicknames.length, validItemLevels.length);
+                    
+                    if (debug && typeof debug === 'function') {
+                        debug(`최적 매칭으로 ${minLength}개 캐릭터 추출 시도`);
+                    }
+                    
                     for (let i = 0; i < minLength; i++) {
                         characterResults.push({
                             nickname: validNicknames[i].nickname,
@@ -200,203 +306,177 @@ const LopecOCR = (function() {
                         });
                     }
                 }
+                
+                // 디버그 요약 정보
+                if (debug && typeof debug === 'function') {
+                    debug(`신청자 목록에서 추출된 캐릭터 수: ${characterResults.length}`);
+                }
+                
             } else if (version === OCR_VERSIONS.PARTICIPANT) {
                 // 참가자 목록용 처리 로직 (새로운 규칙 적용)
                 
+                // 디버그 로그 헬퍼 함수 - 코드 가독성 향상
+                const logDebug = (message) => {
+                    if (debug && typeof debug === 'function') {
+                        debug(message);
+                    }
+                };
+                
+                // 닉네임 후보 처리 헬퍼 함수
+                const processNicknameCandidate = (candidateNickname) => {
+                    // 닉네임 유효성 검사 수행
+                    if (isValidParticipantNickname(candidateNickname)) {
+                        // 이미 추가된 닉네임인지 확인
+                        const isDuplicate = characterResults.some(item => item.nickname === candidateNickname);
+                        
+                        if (!isDuplicate) {
+                            characterResults.push({
+                                nickname: candidateNickname,
+                                itemLevel: "" // 참가자 목록에는 아이템 레벨 없음
+                            });
+                            
+                            logDebug(`유효한 닉네임으로 추가: ${candidateNickname}`);
+                        } else {
+                            logDebug(`중복 닉네임이라 무시: ${candidateNickname}`);
+                        }
+                    } else {
+                        logDebug(`유효하지 않은 닉네임으로 필터링: ${candidateNickname}`);
+                    }
+                };
+                
+                // 텍스트 처리 시작
+                logDebug("참가자 목록 처리 시작");
+                
                 // 1. 처리할 텍스트 범위 제한 - "인원 수" 또는 "2번 파티" 패턴 이후 텍스트만 처리
                 let processedText = allText;
+                let startText = ""; // 첫 번째 닉네임 추출용 텍스트
                 
-                // 첫 번째 시도: "인원 수" 패턴 찾기 (보다 유연한 정규식 사용)
+                // A. "인원 수" 패턴 찾기
                 const memberCountPattern = /인원\s*수/;
                 const memberCountMatch = processedText.match(memberCountPattern);
                 
-                // 두 번째 시도: "2번 파티" 패턴 찾기 (첫 번째 패턴을 찾지 못한 경우)
+                // B. "2번 파티" 패턴 찾기
                 const twoNumberPattern = /2\s*번\s*파티/;
+                const twoNumberMatch = processedText.match(twoNumberPattern);
                 
+                // 패턴 검색 결과에 따른 텍스트 범위 조정
                 if (memberCountMatch) {
-                    // "인원 수" 이후의 텍스트로 제한
+                    // "인원 수" 패턴 처리
                     const startIndex = memberCountMatch.index;
+                    logDebug(`"인원 수" 패턴 발견, 위치: ${startIndex}, 전체 텍스트 길이: ${allText.length}`);
+                    
                     if (startIndex > -1) {
                         // "인원 수"를 포함한 위치부터 텍스트 저장
-                        let textAfterMemberCount = processedText.substring(startIndex);
+                        processedText = processedText.substring(startIndex);
+                        logDebug(`"인원 수" 패턴 이후 텍스트: ${processedText.substring(0, 100)}...`);
                         
-                        if (debug && typeof debug === 'function') {
-                            debug(`"인원 수" 패턴 발견, 이후 텍스트만 사용: ${textAfterMemberCount.substring(0, 100)}...`);
-                            debug(`"인원 수" 패턴 위치: ${startIndex}, 전체 텍스트 길이: ${allText.length}`);
+                        // 첫 번째 닉네임 추출용 텍스트 준비
+                        // "인원 수" 패턴의 길이 계산
+                        const patternLength = processedText.match(/인원\s*수/)[0].length;
+                        startText = processedText.substring(patternLength).trim();
+                        
+                        logDebug(`"인원 수" 패턴 길이: ${patternLength}, 이후 텍스트: ${startText.substring(0, 100)}...`);
+                    }
+                } else if (twoNumberMatch) {
+                    // "2번 파티" 패턴 처리
+                    const startIndex = twoNumberMatch.index;
+                    logDebug(`"2번 파티" 패턴 발견, 위치: ${startIndex}`);
+                    
+                    if (startIndex > -1) {
+                        // 패턴 위치부터 텍스트 추출
+                        processedText = processedText.substring(startIndex);
+                        logDebug(`"2번 파티" 패턴 이후 텍스트: ${processedText.substring(0, 100)}...`);
+                        
+                        // "2번 파티" 다음 줄바꿈 이후 텍스트 추출
+                        const nextNewlineIndex = processedText.indexOf('\n');
+                        if (nextNewlineIndex > -1) {
+                            processedText = processedText.substring(nextNewlineIndex);
+                            startText = processedText.trim();
+                            logDebug(`"2번 파티" 이후 줄바꿈 다음 텍스트: ${startText.substring(0, 100)}...`);
                         }
+                    }
+                } else {
+                    logDebug(`"인원 수"와 "2번 파티" 패턴을 모두 찾을 수 없음, 전체 텍스트 처리`);
+                    startText = processedText; // 시작 텍스트도 전체 텍스트로 설정
+                }
+                
+                // 2. 첫 번째 닉네임 추출 시도 (startText 사용)
+                logDebug("첫 번째 닉네임 추출 시도");
+                
+                // 특수문자 및 한자 제거 (텍스트 전처리)
+                let cleanedStartText = startText.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ")
+                                               .replace(/\s+/g, " ")
+                                               .trim();
+                
+                logDebug(`정제된 시작 텍스트: ${cleanedStartText.substring(0, 100)}...`);
+                
+                // 첫 번째 공백을 찾아 첫 단어 추출
+                const firstSpacePos = cleanedStartText.indexOf(' ');
+                if (firstSpacePos > 0) {
+                    // 첫 번째 단어 추출 및 유효성 검사
+                    const firstWordCandidate = cleanedStartText.substring(0, firstSpacePos).trim();
+                    logDebug(`첫 번째 단어 후보: ${firstWordCandidate}`);
+                    
+                    if (isValidParticipantNickname(firstWordCandidate)) {
+                        // 유효한 닉네임이면 결과 배열 맨 앞에 추가
+                        characterResults.unshift({
+                            nickname: firstWordCandidate,
+                            itemLevel: "", 
+                            isFirstLineNickname: true
+                        });
+                        logDebug(`첫 번째 닉네임으로 추가: ${firstWordCandidate}`);
+                    } else {
+                        logDebug(`첫 번째 단어가 유효하지 않음: ${firstWordCandidate}`);
                         
-                        // "인원 수" 패턴 다음에 오는 단어 찾기
-                        // 먼저 "인원 수" 패턴의 길이를 계산
-                        const patternLength = textAfterMemberCount.match(/인원\s*수/)[0].length;
+                        // 두 번째 단어 시도
+                        const restOfText = cleanedStartText.substring(firstSpacePos + 1).trim();
+                        const nextSpaceIndex = restOfText.indexOf(' ');
                         
-                        // "인원 수" 패턴 이후의 텍스트
-                        const textAfterPattern = textAfterMemberCount.substring(patternLength).trim();
-                        
-                        if (debug && typeof debug === 'function') {
-                            debug(`"인원 수" 패턴 길이: ${patternLength}`);
-                            debug(`"인원 수" 패턴 이후 텍스트: ${textAfterPattern.substring(0, 100)}...`);
-                        }
-                        
-                        // 특수문자 및 한자 제거 (텍스트 전처리)
-                        let cleanedText = textAfterPattern.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ");
-                        cleanedText = cleanedText.replace(/\s+/g, " ").trim(); // 연속된 공백을 하나로 압축
-                        
-                        if (debug && typeof debug === 'function') {
-                            debug(`정제된 텍스트: ${cleanedText.substring(0, 100)}...`);
-                        }
-                        
-                        // 첫 번째 공백을 찾아 첫 단어 추출
-                        const firstSpaceAfterPattern = cleanedText.indexOf(' ');
-                        if (firstSpaceAfterPattern > 0) {
-                            // 첫 번째 단어 추출
-                            const firstWordCandidate = cleanedText.substring(0, firstSpaceAfterPattern).trim();
+                        if (nextSpaceIndex > 0) {
+                            const secondWordCandidate = restOfText.substring(0, nextSpaceIndex).trim();
+                            logDebug(`두 번째 단어 시도: ${secondWordCandidate}`);
                             
-                            if (debug && typeof debug === 'function') {
-                                debug(`"인원 수" 패턴 이후 첫 번째 단어: ${firstWordCandidate}`);
-                                debug(`첫 번째 공백 위치: ${firstSpaceAfterPattern}`);
-                            }
-                            
-                            // 유효성 검사 후 닉네임으로 추가
-                            if (isValidParticipantNickname(firstWordCandidate)) {
+                            if (isValidParticipantNickname(secondWordCandidate)) {
                                 characterResults.unshift({
-                                    nickname: firstWordCandidate,
+                                    nickname: secondWordCandidate,
                                     itemLevel: "", 
                                     isFirstLineNickname: true
                                 });
-                                
-                                if (debug && typeof debug === 'function') {
-                                    debug(`"인원 수" 패턴 이후 첫 번째 닉네임으로 추가: ${firstWordCandidate}`);
-                                    debug(`현재 caracterResults 배열: ${JSON.stringify(characterResults)}`);
-                                }
-                            } else {
-                                if (debug && typeof debug === 'function') {
-                                    debug(`"인원 수" 패턴 이후 첫 번째 단어 유효하지 않음: ${firstWordCandidate}`);
-                                    
-                                    // 유효하지 않은 이유 상세 확인
-                                    const knownServerNames = [
-                                        "루페온", "실리안", "아만", "카마인", "카제로스", "아브렐슈드", "카단", "니나브"
-                                    ];
-                                    const excludedExactWords = [
-                                        "파티", "찾기", "신청", "수락", "거절", "참가자", "신청자", "레이드", "수강석", 
-                                        "확인", "취소", "귓속말", "길드", "친구", "차단", "정보", "캐릭터", "모집중"
-                                    ];
-                                    
-                                    if (knownServerNames.includes(firstWordCandidate)) {
-                                        debug(`유효하지 않은 이유: 서버명과 일치`);
-                                    } else if (firstWordCandidate === "인원" || firstWordCandidate === "수") {
-                                        debug(`유효하지 않은 이유: "인원" 또는 "수"와 정확히 일치`);
-                                    } else if (excludedExactWords.includes(firstWordCandidate)) {
-                                        debug(`유효하지 않은 이유: 제외 단어 목록에 포함됨`);
-                                    } else if (!/[a-zA-Z가-힣]/.test(firstWordCandidate)) {
-                                        debug(`유효하지 않은 이유: 한글 또는 영문자 포함 안 됨`);
-                                    } else if (firstWordCandidate.length < 2 || firstWordCandidate.length > 20) {
-                                        debug(`유효하지 않은 이유: 길이 제한 (${firstWordCandidate.length}자)`);
-                                    } else {
-                                        debug(`유효하지 않은 이유: 알 수 없음`);
-                                    }
-                                    
-                                    // 다음 단어 시도
-                                    const restOfText = cleanedText.substring(firstSpaceAfterPattern + 1).trim();
-                                    const nextSpaceIndex = restOfText.indexOf(' ');
-                                    
-                                    if (nextSpaceIndex > 0) {
-                                        const secondWordCandidate = restOfText.substring(0, nextSpaceIndex).trim();
-                                        debug(`두 번째 단어 시도: ${secondWordCandidate}`);
-                                        
-                                        if (isValidParticipantNickname(secondWordCandidate)) {
-                                            characterResults.unshift({
-                                                nickname: secondWordCandidate,
-                                                itemLevel: "", 
-                                                isFirstLineNickname: true
-                                            });
-                                            debug(`두 번째 단어를 첫 닉네임으로 추가: ${secondWordCandidate}`);
-                                        } else {
-                                            debug(`두 번째 단어도 유효하지 않음: ${secondWordCandidate}`);
-                                        }
-                                    }
-                                }
+                                logDebug(`두 번째 단어를 첫 닉네임으로 추가: ${secondWordCandidate}`);
                             }
-                        } else if (debug && typeof debug === 'function') {
-                            debug(`"인원 수" 패턴 이후 텍스트에서 공백을 찾을 수 없음`);
                         }
-                        
-                        // 원래 코드처럼 텍스트 자르기 계속 진행
-                        processedText = processedText.substring(startIndex);
                     }
                 } else {
-                    // "인원 수" 패턴이 없는 경우 "2번 파티" 패턴 시도
-                    const twoNumberMatch = processedText.match(twoNumberPattern);
-                    
-                    if (twoNumberMatch) {
-                        // "2번 파티" 이후의 텍스트로 제한
-                        const startIndex = twoNumberMatch.index;
-                        if (startIndex > -1) {
-                            // 인덱스 다음 위치부터 텍스트 자르기
-                            processedText = processedText.substring(startIndex);
-                            
-                            if (debug && typeof debug === 'function') {
-                                debug(`"2번 파티" 패턴 발견, 이후 텍스트만 사용: ${processedText.substring(0, 100)}...`);
-                            }
-                            
-                            // "2번 파티" 다음에 오는 첫 번째 줄바꿈(\n) 이후의 텍스트만 처리
-                            const nextNewlineIndex = processedText.indexOf('\n');
-                            if (nextNewlineIndex > -1) {
-                                processedText = processedText.substring(nextNewlineIndex);
-                                
-                                if (debug && typeof debug === 'function') {
-                                    debug(`"2번 파티" 이후 줄바꿈 다음 텍스트만 사용: ${processedText.substring(0, 100)}...`);
-                                }
-                            }
-                        }
-                    } else if (debug && typeof debug === 'function') {
-                        debug(`"인원 수"와 "2번 파티" 패턴을 모두 찾을 수 없음, 전체 텍스트 처리`);
-                        debug(`텍스트 처음 100자: ${allText.substring(0, 100)}`);
-                        debug(`"인원 수" 패턴: ${memberCountPattern.toString()}`);
-                        debug(`"2번 파티" 패턴: ${twoNumberPattern.toString()}`);
-                    }
+                    logDebug("첫 번째 공백을 찾을 수 없음");
                 }
                 
-                // 3. 텍스트를 줄 단위로 분리하고 전처리
+                // 3. 줄 단위로 분리 및 처리
+                logDebug("텍스트를 줄 단위로 분리하여 처리 시작");
                 const lines = processedText.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0); // 빈 줄 제거
+                                          .map(line => line.trim())
+                                          .filter(line => line.length > 0);
                 
-                if (debug && typeof debug === 'function') {
-                    debug(`분리된 줄 수: ${lines.length}`);
-                    debug(`처리할 줄 목록: ${JSON.stringify(lines.slice(0, 10))}${lines.length > 10 ? '...(길이 제한)' : ''}`);
-                }
+                logDebug(`분리된 줄 수: ${lines.length}, 처음 10개 줄: ${JSON.stringify(lines.slice(0, 10))}${lines.length > 10 ? '...' : ''}`);
                 
-                // 4. 파티원 닉네임 추출 규칙 적용
-                
-                // 알려진 서버명 배열
+                // 4. 파티원 닉네임 추출 - 알려진 서버명 배열
                 const knownServerNames = [
                     "루페온", "카제로스", "아브렐슈드", "카단", "니나브", "실리안", "카마인", "아만"
                 ];
                 
                 // 각 줄 처리
-                for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i];
-                    
-                    // 규칙: 두 글자 미만인지 확인
-                    if (line.length < 2) {
-                        if (debug && typeof debug === 'function') {
-                            debug(`두 글자 미만이라 무시: ${line}`);
-                        }
-                        continue;
+                lines.forEach((originalLine, lineIndex) => {
+                    // 빠른 필터링: 두 글자 미만, 서버명과 정확히 일치, X 마커 없음
+                    if (originalLine.length < 2 || 
+                        knownServerNames.includes(originalLine) || 
+                        !originalLine.includes("X")) {
+                        logDebug(`줄 ${lineIndex} 필터링: ${originalLine.substring(0, 30)}${originalLine.length > 30 ? '...' : ''}`);
+                        return; // forEach에서 continue 역할
                     }
                     
-                    // 규칙: 서버명과 정확히 일치하는 경우 무시
-                    if (knownServerNames.includes(line)) {
-                        if (debug && typeof debug === 'function') {
-                            debug(`서버명과 정확히 일치하여 무시: ${line}`);
-                        }
-                        continue;
-                    }
+                    // 줄 전처리
+                    let line = originalLine;
                     
-                    // 규칙: 숫자 패턴 처리 강화 - 다양한 위치의 숫자 제거
-                    const originalLine = line;
-                    
-                    // 1. 줄 시작 부분의 숫자+공백 제거 
+                    // 1. 줄 시작 부분의 숫자+공백 제거
                     line = line.replace(/^\d+\s+/, " ");
                     
                     // 2. 중간에 위치한 단독 숫자+공백 패턴 처리
@@ -405,169 +485,86 @@ const LopecOCR = (function() {
                     // 3. X 앞에 있는 숫자 패턴 특별 처리
                     line = line.replace(/\s+\d+\s*X/g, " X");
                     
-                    if (originalLine !== line && debug && typeof debug === 'function') {
-                        debug(`숫자 패턴 제거: ${originalLine} -> ${line}`);
+                    // 4. "인원"과 "수" 단어 제거
+                    if (line.includes("인원") || line.includes("수")) {
+                        line = line.replace(/인원|수/g, " ");
                     }
                     
-                    // 새로운 규칙: 줄에 X가 포함되어 있는지 확인 (순서 변경, 먼저 확인만 하고 제거는 나중에)
-                    if (!line.includes("X")) {
-                        if (debug && typeof debug === 'function') {
-                            debug(`X가 포함되지 않아 무시: ${line}`);
-                        }
-                        continue;
+                    // 5. 한글, 영어, 숫자를 제외한 문자 제거 (한자, 특수문자 등)
+                    line = line.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ").trim();
+                    
+                    if (originalLine !== line) {
+                        logDebug(`줄 ${lineIndex} 전처리: "${originalLine}" -> "${line}"`);
                     }
                     
-                    // "인원"과 "수" 단어 제거
-                    let processedLine = line;
-                    if (processedLine.includes("인원") || processedLine.includes("수")) {
-                        const originalInwonLine = processedLine;
-                        processedLine = processedLine.replace(/인원|수/g, " ");
-                        if (debug && typeof debug === 'function') {
-                            debug(`"인원"과 "수" 제거: ${originalInwonLine} -> ${processedLine}`);
-                        }
-                    }
-                    
-                    // 한글, 영어, 숫자를 제외한 문자 제거 (한자, 특수문자 등)
-                    const originalProcessedLine = processedLine;
-                    processedLine = processedLine.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ");
-                    if (originalProcessedLine !== processedLine && debug && typeof debug === 'function') {
-                        debug(`특수문자/한자 제거: ${originalProcessedLine} -> ${processedLine}`);
-                    }
-                    
-                    // 앞뒤 공백 제거
-                    processedLine = processedLine.trim();
-                    
-                    // 개선된 로직: 모든 "X" 마커를 찾아 각각의 앞에 있는 단어 추출
+                    // X 마커 위치 찾기
                     const allXPositions = [];
-                    let pos = processedLine.indexOf("X");
+                    let pos = line.indexOf("X");
                     while (pos !== -1) {
                         allXPositions.push(pos);
-                        pos = processedLine.indexOf("X", pos + 1);
+                        pos = line.indexOf("X", pos + 1);
                     }
                     
-                    if (debug && typeof debug === 'function') {
-                        debug(`찾은 X 마커 개수: ${allXPositions.length}`);
-                    }
+                    logDebug(`줄 ${lineIndex}: ${allXPositions.length}개의 X 마커 발견`);
                     
                     // 각 X 위치에 대해 앞쪽 닉네임 추출
-                    for (const xPos of allXPositions) {
-                        if (xPos <= 0) continue;
+                    allXPositions.forEach(xPos => {
+                        if (xPos <= 0) return;
                         
                         // X 앞의 문자열 추출
-                        let beforeX = processedLine.substring(0, xPos).trim();
+                        let beforeX = line.substring(0, xPos).trim();
                         
                         // 앞 쪽 X 이후 텍스트만 고려하도록 처리
                         const xPositionsBeforeCurrent = allXPositions.filter(p => p < xPos);
                         if (xPositionsBeforeCurrent.length > 0) {
                             const lastXBeforeCurrent = Math.max(...xPositionsBeforeCurrent);
                             // 이전 X 다음부터 현재 X 전까지의 텍스트만 고려
-                            beforeX = processedLine.substring(lastXBeforeCurrent + 1, xPos).trim();
+                            beforeX = line.substring(lastXBeforeCurrent + 1, xPos).trim();
                         }
                         
-                        if (debug && typeof debug === 'function') {
-                            debug(`X(${xPos}) 앞의 텍스트: '${beforeX}'`);
-                        }
+                        logDebug(`X(${xPos}) 앞의 텍스트: '${beforeX}'`);
                         
-                        // 닉네임 추출을 위한 정규식 패턴
+                        // 닉네임 추출 시도 - 두 가지 패턴
                         // 1. X 바로 앞에 있는 단어 패턴 (더 정확한 매칭)
                         const exactPattern = /([가-힣a-zA-Z]{2,20})(?:\s*X)$/;
                         const exactMatch = beforeX.match(exactPattern);
                         
                         if (exactMatch) {
                             // X 바로 앞에 있는 단어를 우선적으로 사용
-                            const candidateNickname = exactMatch[1];
-                            
-                            if (debug && typeof debug === 'function') {
-                                debug(`X 바로 앞의 정확한 닉네임 후보: ${candidateNickname}`);
-                            }
-                            
-                            // 닉네임 유효성 검사 및 추가 로직...
-                            processNicknameCandidate(candidateNickname);
+                            processNicknameCandidate(exactMatch[1]);
                         } else {
-                            // 일반적인 단어 추출 패턴 (기존 방식)
+                            // 2. 일반적인 단어 추출 패턴
                             const nicknamePattern = /([가-힣a-zA-Z0-9]{2,20})(?:\s|$)/g;
                             const matches = [...beforeX.matchAll(nicknamePattern)];
                             
                             if (matches.length > 0) {
                                 // 가장 X에 가까운(마지막) 패턴 매치 선택
                                 const lastMatch = matches[matches.length - 1];
-                                const candidateNickname = lastMatch[1];
-                                
-                                if (debug && typeof debug === 'function') {
-                                    debug(`일반 패턴으로 찾은 닉네임 후보: ${candidateNickname}`);
-                                }
-                                
-                                // 닉네임 유효성 검사 및 추가 로직...
-                                processNicknameCandidate(candidateNickname);
+                                processNicknameCandidate(lastMatch[1]);
                             }
                         }
-                        
-                        // 닉네임 후보 처리를 위한 내부 함수
-                        function processNicknameCandidate(candidateNickname) {
-                            // 닉네임 유효성 검사 수행
-                            if (isValidParticipantNickname(candidateNickname)) {
-                                // 이미 추가된 닉네임인지 확인
-                                const isDuplicate = characterResults.some(item => item.nickname === candidateNickname);
-                                
-                                if (!isDuplicate) {
-                                    characterResults.push({
-                                        nickname: candidateNickname,
-                                        itemLevel: "" // 참가자 목록에는 아이템 레벨 없음
-                                    });
-                                    
-                                    if (debug && typeof debug === 'function') {
-                                        debug(`유효한 닉네임으로 추가: ${candidateNickname}`);
-                                    }
-                                } else if (debug && typeof debug === 'function') {
-                                    debug(`중복 닉네임이라 무시: ${candidateNickname}`);
-                                }
-                            } else if (debug && typeof debug === 'function') {
-                                debug(`유효하지 않은 닉네임으로 필터링: ${candidateNickname}`);
-                            }
-                        }
-                    }
-                }
+                    });
+                });
                 
-                // 첫 번째 닉네임 추출 - 처리된 결과 이후에 수행
-                // 이 방식으로 처리하면 항상 첫 번째 닉네임이 결과 맨 앞에 배치됨
+                // 5. 첫 번째 단어 닉네임 중복 확인 - 처리된 결과 이후에 한 번 더 시도
+                logDebug("첫 번째 닉네임 최종 확인");
+                
                 const firstSpaceInProcessedText = processedText.indexOf(' ');
-                if (debug && typeof debug === 'function') {
-                    debug(`첫 번째 닉네임 추출 시작 - 처리된 텍스트: ${processedText.substring(0, 50)}...`);
-                }
-                
                 if (firstSpaceInProcessedText > 0) {
-                    // 처리된 텍스트의 첫 부분 추출 시도
                     const firstWordCandidate = processedText.substring(0, firstSpaceInProcessedText).trim();
-                    
-                    if (debug && typeof debug === 'function') {
-                        debug(`첫 번째 공백 위치: ${firstSpaceInProcessedText}, 추출 후보: ${firstWordCandidate}`);
-                    }
-                    
-                    // 이미 결과에 있는 닉네임인지 확인
                     const isDuplicate = characterResults.some(item => item.nickname === firstWordCandidate);
                     
-                    // 중복이 아니고 유효한 경우에만 추가
                     if (!isDuplicate && isValidParticipantNickname(firstWordCandidate)) {
-                        characterResults.unshift({  // 결과 배열의 앞에 추가
+                        characterResults.unshift({
                             nickname: firstWordCandidate,
-                            itemLevel: "", // 참가자 목록에는 아이템 레벨 없음
+                            itemLevel: "",
                             isFirstLineNickname: true
                         });
-                        
-                        if (debug && typeof debug === 'function') {
-                            debug(`첫 번째 닉네임으로 추가: ${firstWordCandidate}`);
-                        }
-                    } else if (debug && typeof debug === 'function') {
-                        debug(`첫 번째 닉네임 후보 제외 이유: ${isDuplicate ? '중복' : '유효하지 않음'}`);
+                        logDebug(`첫 번째 닉네임으로 최종 추가: ${firstWordCandidate}`);
                     }
-                } else if (debug && typeof debug === 'function') {
-                    debug(`처리된 텍스트에서 공백을 찾을 수 없음`);
                 }
                 
-                if (debug && typeof debug === 'function') {
-                    debug(`처리 후 추출된 닉네임 수: ${characterResults.length}`);
-                    debug(`추출된 닉네임 목록: ${JSON.stringify(characterResults.map(c => c.nickname))}`);
-                }
+                logDebug(`참가자 목록 처리 완료: ${characterResults.length}개 닉네임 추출`);
             } else {
                 console.error('알 수 없는 OCR 버전:', version);
                 return characterResults;
@@ -664,9 +661,20 @@ const LopecOCR = (function() {
         return variations;
     }
     
-    // 메인 OCR 처리 함수 - 전달된 API 키와 버전 사용
+    /**
+     * 메인 OCR 처리 함수 - 클립보드 이미지를 OCR 처리하고 캐릭터 정보 추출
+     * 
+     * @param {string} apiKey - OCR API 키 ('free'인 경우 기본값 사용)
+     * @param {string} version - OCR 처리 버전 (APPLICANT 또는 PARTICIPANT)
+     * @param {Object} callbacks - 콜백 함수 모음
+     * @param {Function} callbacks.onStatusUpdate - 상태 업데이트 콜백
+     * @param {Function} callbacks.onDebugInfo - 디버그 정보 콜백
+     * @param {Function} callbacks.onImageCropped - 이미지 크롭 완료 콜백
+     * @param {Function} callbacks.onError - 에러 콜백
+     * @returns {Promise<Array>} 추출된 캐릭터 정보 배열
+     */
     async function processClipboardImage(apiKey, version = OCR_VERSIONS.APPLICANT, callbacks = {}) {
-        const { onStatusUpdate, onDebugInfo, onImageCropped } = callbacks;
+        const { onStatusUpdate, onDebugInfo, onImageCropped, onError } = callbacks;
         
         // API 키 유효성 검사
         if (!apiKey || typeof apiKey !== 'string') {
@@ -681,164 +689,478 @@ const LopecOCR = (function() {
         // 'free'로 입력된 경우 기본 API 키 사용 (HTML 인터페이스 호환성 유지)
         const actualApiKey = apiKey === 'free' ? 'up_cdqdDDwambXqQoPoLvaHWmrWC3MO7' : apiKey;
         
-        // 상태 업데이트 함수
+        // 상태 업데이트 및 디버그 함수 초기화
         const updateStatus = (message) => {
             if (onStatusUpdate && typeof onStatusUpdate === 'function') {
                 onStatusUpdate(message);
             }
-            //console.log(message); // 콘솔에도 기록
         };
         
-        // 디버그 정보 추가 함수
         const addDebug = (message) => {
             if (onDebugInfo && typeof onDebugInfo === 'function') {
                 onDebugInfo(message);
             }
-            //console.log(message); // 콘솔에도 기록
+        };
+        
+        const handleError = (error) => {
+            if (onError && typeof onError === 'function') {
+                onError(error);
+            }
         };
         
         try {
-            updateStatus('클립보드에서 이미지 가져오는 중...');
-            addDebug(`OCR 버전: ${version}`);
+            // 1. 클립보드 이미지 가져오기
+            updateStatus('클립보드 이미지 가져오는 중...');
+            addDebug('클립보드 이미지 요청 시작');
             
-            // 클립보드에서 이미지 가져오기
-            const imageBlob = await getImageFromClipboard();
+            // 클립보드 접근 타임아웃 설정 (10초)
+            const clipboardPromise = getImageFromClipboard();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('클립보드 접근 시간 초과 (10초)')), 10000);
+            });
             
+            // Promise.race를 사용하여 타임아웃 처리
+            const imageBlob = await Promise.race([clipboardPromise, timeoutPromise]).catch(error => {
+                addDebug(`클립보드 접근 실패: ${error.message}`);
+                handleError(error);
+                throw error;
+            });
+            
+            addDebug(`클립보드 이미지 가져옴: ${Math.round(imageBlob.size / 1024)}KB`);
+            
+            // 2. 이미지 처리 (오른쪽 부분 크롭)
             updateStatus('이미지 처리 중...');
-            // 이미지 로드
             const img = await createImageFromBlob(imageBlob);
+            addDebug(`원본 이미지 크기: ${img.width}x${img.height}, 비율: ${(img.width / img.height).toFixed(2)}`);
             
-            // 이미지 오른쪽 부분 추출
-            let processedBlob;
-            try {
-                const croppedImage = await cropRightPartOfImage(img);
-                
-                // 크롭된 이미지 콜백 호출
-                if (onImageCropped && typeof onImageCropped === 'function') {
-                    onImageCropped(croppedImage);
-                }
-                
-                processedBlob = await imageDataToBlob(croppedImage);
-            } catch (error) {
-                addDebug(`이미지 분할 실패: ${error.message}. 원본 이미지 사용`);
-                processedBlob = imageBlob;
+            const croppedImageData = await cropRightPartOfImage(img);
+            addDebug(`크롭된 이미지 크기: ${croppedImageData.width}x${croppedImageData.height}`);
+            
+            // 이미지 크롭 콜백 호출 (필요한 경우)
+            if (onImageCropped && typeof onImageCropped === 'function') {
+                onImageCropped(croppedImageData);
             }
             
-            // API 호출 - 전달된 API 키 사용
+            // 3. 이미지 데이터를 Blob으로 변환
+            const croppedBlob = await imageDataToBlob(croppedImageData);
+            addDebug(`처리된 이미지 크기: ${Math.round(croppedBlob.size / 1024)}KB`);
+            
+            // 4. OCR API 호출 준비
             updateStatus('OCR API 호출 중...');
-            try {
-                const formData = new FormData();
-                formData.append('document', processedBlob, 'image.png');
-                
-                const headers = new Headers();
-                headers.append('Authorization', `Bearer ${actualApiKey}`); // 전달된 API 키 사용
-                
-                addDebug('API 호출 시작: ' + API_URL);
-                
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: headers,
-                    body: formData,
-                    mode: 'cors'
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    if (response.status === 401) {
-                        throw new Error('API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.');
-                    } else if (response.status === 429) {
-                        throw new Error('API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요.');
-                    } else {
-                        throw new Error(`API 오류 (${response.status}): ${errorText}`);
-                    }
-                }
-                
-                const data = await response.json();
-                addDebug('API 응답 수신 완료');
-                
-                // 캐릭터 정보 추출 - 선택된 버전에 맞는 추출 로직 사용
-                updateStatus('캐릭터 정보 추출 중...');
-                const extractedCharacters = extractCharacterInfo(data, version, addDebug);
-                
-                // 추출 결과 정보 로깅
-                addDebug(`추출된 캐릭터 수: ${extractedCharacters.length}`);
-                if (extractedCharacters.length > 0) {
-                    addDebug(`첫 번째 캐릭터: ${extractedCharacters[0].nickname}, 아이템 레벨: ${extractedCharacters[0].itemLevel}`);
-                    // isFirstLineNickname 속성 확인
-                    const firstNicknameChar = extractedCharacters.find(char => char.isFirstLineNickname);
-                    if (firstNicknameChar) {
-                        addDebug(`첫 번째 닉네임 플래그가 있는 캐릭터: ${firstNicknameChar.nickname}`);
-                    } else {
-                        addDebug(`첫 번째 닉네임 플래그가 있는 캐릭터 없음`);
-                    }
 
-                    // 추출된 모든 캐릭터 로그
-                    addDebug(`추출된 모든 캐릭터: ${JSON.stringify(extractedCharacters.map(c => ({
-                        nickname: c.nickname,
-                        isFirstLineNickname: c.isFirstLineNickname
-                    })))}`);
+            // 이미지를 base64로 변환 (API 요구사항에 맞춰 수정)
+            const base64Image = await blobToBase64(croppedBlob);
+            addDebug(`이미지를 Base64로 변환 완료: ${Math.round(base64Image.length / 1024)}KB`);
+
+            // FormData 객체 생성 (원래 방식으로 복원)
+            const formData = new FormData();
+            formData.append('document', croppedBlob, 'image.png');
+            formData.append('model', 'ocr');
+            formData.append('options', JSON.stringify({ language: "ko" }));
+
+            // API 요청 설정 - multipart/form-data 형식으로 전송 (원래 방식)
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${actualApiKey}`
+                    // Content-Type은 FormData에서 자동으로 설정됨
+                },
+                body: formData
+            };
+            
+            // 요청 디버그 정보
+            addDebug(`OCR API 호출 시작 (버전: ${version}, API 키: ${actualApiKey.substring(0, 5)}...)`);
+
+            // 5. OCR API 호출
+            const response = await fetch(API_URL, requestOptions);
+            
+            // 응답 상태 확인
+            if (!response.ok) {
+                const errorResponse = await response.text();
+                addDebug(`OCR API 오류: ${response.status} ${response.statusText}`);
+                addDebug(`오류 응답: ${errorResponse}`);
+                throw new Error(`OCR API 호출 실패: ${response.status} ${response.statusText}`);
+            }
+            
+            // 6. OCR 결과 처리
+            const ocrResult = await response.json();
+            addDebug('OCR API 응답 수신 완료');
+            
+            // 7. 캐릭터 정보 추출
+            updateStatus('OCR 결과에서 캐릭터 정보 추출 중...');
+            const extractedCharacters = extractCharacterInfo(ocrResult, version, addDebug);
+            
+            // 8. 추출 결과 요약
+            if (extractedCharacters.length > 0) {
+                addDebug(`첫 번째 캐릭터: ${extractedCharacters[0].nickname}, 아이템 레벨: ${extractedCharacters[0].itemLevel}`);
+                // isFirstLineNickname 속성 확인
+                const firstNicknameChar = extractedCharacters.find(char => char.isFirstLineNickname);
+                if (firstNicknameChar) {
+                    addDebug(`첫 번째 닉네임 플래그가 있는 캐릭터: ${firstNicknameChar.nickname}`);
+                } else {
+                    addDebug(`첫 번째 닉네임 플래그가 있는 캐릭터 없음`);
                 }
+
+                // 추출된 모든 캐릭터 로그
+                addDebug(`추출된 모든 캐릭터: ${JSON.stringify(extractedCharacters.map(c => ({
+                    nickname: c.nickname,
+                    isFirstLineNickname: c.isFirstLineNickname
+                })))}`);
+            }
+            
+            // 9. 변형 닉네임 생성 포함 확장된 결과
+            const expandedCharacters = [];
+            
+            // 추출된 각 캐릭터에 대해 처리
+            for (const character of extractedCharacters) {
+                // 확장 결과에 원본 캐릭터 추가
+                expandedCharacters.push(character);
                 
-                // 변형 닉네임 생성 포함 확장된 결과
-                const expandedCharacters = [];
-                
-                extractedCharacters.forEach(item => {
-                    // 원본 닉네임 추가
-                    expandedCharacters.push({
-                        nickname: item.nickname,
-                        itemLevel: item.itemLevel || '',
-                        isOriginal: true,
-                        isFirstLineNickname: item.isFirstLineNickname
-                    });
+                // 버전에 따라 닉네임 변형 생성 여부 결정
+                if (version === OCR_VERSIONS.PARTICIPANT) {
+                    // I/l 변형 생성 (참가자 목록에서만)
+                    const variations = generateIlVariations(character.nickname);
                     
-                    // I/l 변형 생성 및 추가
-                    const variations = generateIlVariations(item.nickname);
-                    
-                    // 원본과 다른 변형만 추가
-                    variations.forEach(variant => {
-                        if (variant !== item.nickname) {
+                    // 변형 닉네임에 대한 처리
+                    for (const variant of variations) {
+                        if (variant !== character.nickname) {
                             expandedCharacters.push({
+                                ...character,
                                 nickname: variant,
-                                itemLevel: item.itemLevel || '',
-                                isOriginal: false,
-                                isFirstLineNickname: item.isFirstLineNickname
+                                isVariation: true
                             });
                         }
-                    });
-                });
-                
-                // 디버그 로그 추가 - 확장된 결과 확인
-                if (onDebugInfo && typeof onDebugInfo === 'function') {
-                    addDebug(`확장된 캐릭터 결과:`);
-                    expandedCharacters.forEach((char, idx) => {
-                        addDebug(`${idx+1}. ${char.nickname} - 원본: ${char.isOriginal}, 첫 번째 닉네임: ${char.isFirstLineNickname}`);
-                    });
+                    }
                     
-                    // 첫 번째 닉네임 플래그가 있는 캐릭터 확인
-                    const firstNicknameFound = expandedCharacters.some(char => char.isFirstLineNickname === true);
-                    addDebug(`최종 결과에 첫 번째 닉네임 캐릭터 포함: ${firstNicknameFound}`);
-                    
-                    if (firstNicknameFound) {
-                        const firstChar = expandedCharacters.find(char => char.isFirstLineNickname === true);
-                        addDebug(`최종 첫 번째 닉네임 캐릭터: ${firstChar.nickname}`);
+                    // 디버그 로그
+                    if (variations.length > 1) {
+                        addDebug(`'${character.nickname}'의 ${variations.length-1}개 변형 생성됨`);
                     }
                 }
-                
-                updateStatus('처리 완료!');
-                return expandedCharacters;
-            } catch (error) {
-                console.error('API 호출 중 오류:', error);
-                throw new Error(`API 호출 실패: ${error.message}`);
             }
+            
+            // 10. 최종 상태 업데이트 및 결과 반환
+            const totalCount = expandedCharacters.length;
+            const originalCount = extractedCharacters.length;
+            
+            updateStatus(`${originalCount}개 캐릭터 추출 완료${totalCount > originalCount ? ` (${totalCount-originalCount}개 변형 포함)` : ''}`);
+            addDebug(`OCR 처리 완료: ${originalCount}개 캐릭터 추출, ${totalCount}개 최종 결과`);
+            
+            return expandedCharacters;
+            
         } catch (error) {
-            console.error('이미지 처리 중 오류 발생:', error);
+            // 오류 처리 및 전파
+            const errorMessage = `OCR 처리 오류: ${error.message}`;
+            updateStatus(errorMessage);
+            addDebug(errorMessage);
+            
+            if (error.stack) {
+                addDebug(`오류 스택: ${error.stack}`);
+            }
+            
             throw error;
         }
     }
     
-    // 외부에 노출할 인터페이스
+    /**
+     * OCR로 추출된 캐릭터 정보를 DB와 연동하여 확장된 정보를 가져오는 함수
+     * @param {Array} characters - OCR에서 추출한 캐릭터 정보 배열
+     * @param {string} rankingType - 랭킹 타입 ("DEAL" 또는 "SUP")
+     * @param {Function} onProgress - 진행 상황 콜백
+     * @param {Function} onCharacterUpdate - 캐릭터 정보 업데이트 콜백 (선택적)
+     * @returns {Promise<Array>} 확장된 캐릭터 정보 배열
+     */
+    async function processCharacterData(characters, rankingType = "DEAL", onProgress = null, onCharacterUpdate = null) {
+        // 입력 검증
+        if (!Array.isArray(characters) || characters.length === 0) {
+            console.error("처리할 캐릭터 정보가 없습니다");
+            return [];
+        }
+
+        try {
+            // 진행 상황 업데이트
+            if (onProgress && typeof onProgress === 'function') {
+                onProgress("캐릭터 정보 처리 중...");
+            }
+
+            // 닉네임 배열 추출
+            const nicknames = characters.map(char => char.nickname).filter(Boolean);
+            
+            if (nicknames.length === 0) {
+                console.error("유효한 닉네임이 없습니다");
+                return characters; // 원본 반환
+            }
+
+            // 로그 출력
+            console.log(`${nicknames.length}개 캐릭터 정보 요청 중...`);
+            if (onProgress && typeof onProgress === 'function') {
+                onProgress(`${nicknames.length}개 캐릭터 정보 요청 중...`);
+            }
+
+            // 서버 요청 및 응답 처리
+            try {
+                // characterRead.js에서 가져온 getBatchCharacterData 함수 호출
+                const response = await getBatchCharacterData(nicknames, rankingType);
+                
+                // 응답 유효성 검사
+                if (!response || response.result !== "S") {
+                    console.log("서버 응답 실패 또는 형식 오류:", response);
+                    return characters;
+                }
+                
+                // 데이터가 없거나 비어있는 경우
+                if (!response.data || response.data === "" || response.data === "E") {
+                    console.log("데이터가 없거나 비어있음:", response.data);
+                    return characters;
+                }
+                
+                // 데이터가 문자열인지 확인
+                const dataStr = String(response.data);
+                console.log("파싱할 데이터 문자열:", dataStr);
+                
+                // 캐릭터 데이터 파싱
+                const characterDataArray = [];
+                
+                if (dataStr.includes(':')) {
+                    const entries = dataStr.split(',');
+                    console.log(`${entries.length}개 캐릭터 항목 파싱 시작`);
+                    
+                    for (const entry of entries) {
+                        if (!entry || entry.trim() === '') continue;
+                        
+                        const parts = entry.split(':');
+                        console.log(`항목 파싱: ${entry}`);
+                        
+                        // 최소 4개 이상의 데이터가 있어야 유효함 (닉네임, 레벨, 직업, 점수1)
+                        if (parts.length >= 4) {
+                            const nickname = parts[0];
+                            const level = parts[1] || "";
+                            const characterClass = parts[2] || ""; // 직업 정보
+                            const totalSum = parts[3] || "";
+                            const totalSumSupport = parts[4] || "";
+                            const regDate = parts[5] || "";
+                            
+                            // 서포터 여부 확인 (직업명에 "서폿" 포함 여부)
+                            const isSupport = characterClass.includes("서폿");
+                            
+                            // 표시할 점수 결정: 서포터면 totalSumSupport, 아니면 totalSum
+                            const displayScore = isSupport ? totalSumSupport : totalSum;
+                            
+                            characterDataArray.push({
+                                LCHA_CHARACTER_NICKNAME: nickname,
+                                LCHA_LEVEL: level,
+                                LCHA_CHARACTER_CLASS: characterClass,
+                                LCHA_TOTALSUM: totalSum,
+                                LCHA_TOTALSUMSUPPORT: totalSumSupport,
+                                IS_SUPPORT: isSupport,
+                                DISPLAY_SCORE: displayScore, // 표시용 점수
+                                REG_DATE: regDate
+                            });
+                        }
+                    }
+                    
+                    console.log(`${characterDataArray.length}개 캐릭터 정보 파싱 완료`);
+                } else {
+                    console.log("파싱할 수 없는 데이터 형식:", dataStr);
+                    return characters;
+                }
+                
+                // 파싱된 결과가 없으면 원본 반환
+                if (characterDataArray.length === 0) {
+                    console.log("파싱된 캐릭터 정보가 없습니다");
+                    return characters;
+                }
+                
+                // 진행 상황 업데이트
+                if (onProgress && typeof onProgress === 'function') {
+                    onProgress(`${characterDataArray.length}개 캐릭터 정보 조회 성공`);
+                }
+                
+                // 원본 캐릭터 정보에 DB 데이터 병합
+                const result = [...characters];
+                
+                // DB에서 응답받지 못한 닉네임 목록 생성 (성능을 위해 Set 사용)
+                const respondedNicknames = new Set(characterDataArray.map(data => data.LCHA_CHARACTER_NICKNAME));
+                const missingNicknames = nicknames.filter(nickname => !respondedNicknames.has(nickname));
+                
+                // DB 정보와 OCR 정보 병합
+                for (let i = 0; i < result.length; i++) {
+                    const nickname = result[i].nickname;
+                    const dbData = characterDataArray.find(item => 
+                        item.LCHA_CHARACTER_NICKNAME === nickname
+                    );
+                    
+                    if (dbData) {
+                        // DB 정보 병합
+                        result[i] = {
+                            ...result[i],
+                            itemLevel: dbData.LCHA_LEVEL || result[i].itemLevel || "",
+                            characterClass: dbData.LCHA_CHARACTER_CLASS,
+                            isSupport: dbData.IS_SUPPORT,
+                            displayScore: dbData.DISPLAY_SCORE,
+                            dbInfo: dbData, // 전체 DB 정보 포함
+                            hasDbInfo: true
+                        };
+                    } else {
+                        // DB에 정보가 없는 캐릭터 표시
+                        result[i].hasDbInfo = false;
+                        
+                        // 누락된 닉네임 목록에 포함되어 있으면 처리 중임을 표시
+                        if (missingNicknames.includes(nickname)) {
+                            result[i].isProcessing = true;
+                        }
+                    }
+                }
+                
+                // DB에 없는 캐릭터가 있으면 백그라운드에서 처리 시작
+                if (missingNicknames.length > 0) {
+                    console.log(`DB에 데이터가 없는 캐릭터 ${missingNicknames.length}개 발견:`, missingNicknames);
+                    
+                    if (onProgress && typeof onProgress === 'function') {
+                        onProgress(`DB에 없는 캐릭터 ${missingNicknames.length}개 백그라운드 처리 중...`);
+                    }
+                    
+                    // 각 누락된 캐릭터를 개별적으로 처리
+                    for (const nickname of missingNicknames) {
+                        // 즉시 실행 함수로 캡처
+                        (function(capturedNickname) {
+                            console.log(`"${capturedNickname}" 캐릭터 정보 조회 시도...`);
+                            
+                            // getCharacterProfile 호출하여 백그라운드에서 처리
+                            getCharacterProfile(capturedNickname, function() {
+                                console.log(`"${capturedNickname}" 캐릭터 정보 조회 및 DB 저장 완료`);
+                                
+                                // DB에서 최신 정보 조회 (캐릭터 정보 업데이트를 위한 콜백이 제공된 경우)
+                                if (onCharacterUpdate && typeof onCharacterUpdate === 'function') {
+                                    // DB에서 업데이트된 정보 조회
+                                    getBatchCharacterData([capturedNickname], rankingType)
+                                        .then(updatedResponse => {
+                                            if (updatedResponse && updatedResponse.result === "S" && updatedResponse.data) {
+                                                const updatedDataStr = String(updatedResponse.data);
+                                                
+                                                if (updatedDataStr.includes(':')) {
+                                                    const updatedEntries = updatedDataStr.split(',');
+                                                    if (updatedEntries.length > 0) {
+                                                        const updatedParts = updatedEntries[0].split(':');
+                                                        
+                                                        if (updatedParts.length >= 4) {
+                                                            const level = updatedParts[1] || "";
+                                                            const characterClass = updatedParts[2] || "";
+                                                            const totalSum = updatedParts[3] || "";
+                                                            const totalSumSupport = updatedParts[4] || "";
+                                                            const regDate = updatedParts[5] || "";
+                                                            
+                                                            const isSupport = characterClass.includes("서폿");
+                                                            const displayScore = isSupport ? totalSumSupport : totalSum;
+                                                            
+                                                            const updatedCharData = {
+                                                                LCHA_CHARACTER_NICKNAME: capturedNickname,
+                                                                LCHA_LEVEL: level,
+                                                                LCHA_CHARACTER_CLASS: characterClass,
+                                                                LCHA_TOTALSUM: totalSum,
+                                                                LCHA_TOTALSUMSUPPORT: totalSumSupport,
+                                                                IS_SUPPORT: isSupport,
+                                                                DISPLAY_SCORE: displayScore,
+                                                                REG_DATE: regDate
+                                                            };
+                                                            
+                                                            // 업데이트된 정보로 콜백 호출
+                                                            onCharacterUpdate(capturedNickname, {
+                                                                itemLevel: level,
+                                                                characterClass: characterClass,
+                                                                isSupport: isSupport,
+                                                                displayScore: displayScore,
+                                                                dbInfo: updatedCharData,
+                                                                hasDbInfo: true,
+                                                                isProcessing: false
+                                                            });
+                                                            
+                                                            console.log(`"${capturedNickname}" 캐릭터 정보 업데이트 완료`);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                // 데이터 형식이 잘못되었거나 파싱 실패
+                                                onCharacterUpdate(capturedNickname, { 
+                                                    hasDbInfo: false, 
+                                                    isProcessing: false,
+                                                    error: "데이터 형식 오류"
+                                                });
+                                            } else {
+                                                // 서버 응답 실패
+                                                onCharacterUpdate(capturedNickname, { 
+                                                    hasDbInfo: false, 
+                                                    isProcessing: false,
+                                                    error: "서버 응답 실패" 
+                                                });
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error(`"${capturedNickname}" 정보 업데이트 중 오류:`, error);
+                                            onCharacterUpdate(capturedNickname, { 
+                                                hasDbInfo: false, 
+                                                isProcessing: false,
+                                                error: error.message 
+                                            });
+                                        });
+                                }
+                            });
+                        })(nickname);
+                    }
+                }
+                
+                return result;
+                
+            } catch (error) {
+                console.error("데이터 처리 중 오류:", error);
+                return characters;
+            }
+
+        } catch (error) {
+            console.error("캐릭터 정보 처리 중 오류 발생:", error);
+            if (onProgress && typeof onProgress === 'function') {
+                onProgress(`오류 발생: ${error.message}`);
+            }
+            return characters; // 오류 시 원본 반환
+        }
+    }
+    
+    // ===========================================================================================
+    // 모듈 인터페이스 - 외부에 노출할 API 정의
+    // ===========================================================================================
     return {
+        /**
+         * 클립보드에서 이미지를 가져와 OCR 처리 후 캐릭터 정보를 추출하는 함수
+         * @param {string} apiKey - OCR API 키 ('free'인 경우 기본값 사용)
+         * @param {string} version - OCR 처리 버전
+         * @param {Object} callbacks - 콜백 함수들
+         * @returns {Promise<Array>} 추출된 캐릭터 정보 배열
+         */
         extractCharactersFromClipboard: processClipboardImage,
-        VERSIONS: OCR_VERSIONS // 버전 정보 외부에 노출
+        
+        /**
+         * OCR로 추출된 캐릭터 정보를 DB와 연동하여 확장된 정보를 가져오는 함수
+         * @param {Array} characters - OCR에서 추출한 캐릭터 정보 배열
+         * @param {string} rankingType - 랭킹 타입 ("DEAL" 또는 "SUP")
+         * @param {Function} onProgress - 진행 상황 콜백
+         * @param {Function} onCharacterUpdate - 캐릭터 정보 업데이트 콜백
+         * @returns {Promise<Array>} 확장된 캐릭터 정보 배열
+         */
+        processCharacterData: processCharacterData,
+        
+        /**
+         * OCR 처리 버전 상수
+         * - APPLICANT: 신청자 목록 처리
+         * - PARTICIPANT: 참가자 목록 처리
+         */
+        VERSIONS: OCR_VERSIONS
     };
 })();
+
+// 브라우저 환경에서 전역으로 노출
+window.LopecOCR = LopecOCR;
+
+// ESM 내보내기 추가
+export default LopecOCR;
+export { LopecOCR };

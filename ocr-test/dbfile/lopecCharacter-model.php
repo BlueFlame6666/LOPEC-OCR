@@ -755,8 +755,8 @@ class modelLopecCharacter extends coreUnion {
 		try {
 			// 닉네임 배열이 비었거나 배열이 아닌 경우, 결과가 없는 쿼리 반환
 			if(empty($nicknames) || !is_array($nicknames)) {
-				return "SELECT LCHA_CHARACTER_NICKNAME, LCHA_CHARACTER_CLASS, LCHA_LEVEL, LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT 
-						FROM ".TN_LOPEC_CHARACTER." WHERE 1=0";
+				return "SELECT LCHA_CHARACTER_NICKNAME, LCHA_CHARACTER_CLASS, LCHA_LEVEL, LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT, REG_DATE
+						FROM LOPEC_CHARACTER WHERE 1=0";
 			}
 			
 			// 플레이스홀더 생성 (닉네임 배열 길이만큼 '?' 생성)
@@ -764,8 +764,8 @@ class modelLopecCharacter extends coreUnion {
 			
 			// 딜러/서폿 구분 없이 필요한 컬럼만 선택
 			$retQuery = 	"SELECT LCHA_CHARACTER_NICKNAME, LCHA_CHARACTER_CLASS, LCHA_LEVEL, 
-							LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT
-							FROM ".TN_LOPEC_CHARACTER." 
+							LCHA_TOTALSUM, LCHA_TOTALSUMSUPPORT, REG_DATE
+							FROM LOPEC_CHARACTER 
 							WHERE USE_TN = ? AND LCHA_CHARACTER_NICKNAME IN (".$placeholders.")
 							ORDER BY FIELD(LCHA_CHARACTER_NICKNAME, ".implode(',', array_fill(0, count($nicknames), '?')).")";
 		} catch (Exception $e) {

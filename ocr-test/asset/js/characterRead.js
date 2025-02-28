@@ -1,131 +1,57 @@
-// 특정 캐릭터의 최고 점수 정보 읽기
-export function getLopecCharacterBest(characterNickname) {
-    var atMode = "selectCharacterBest";
-    var requestData = {
-        atMode: atMode,
-        lchaCharacterNickname: characterNickname
-    };
+// characterRead.js - 캐릭터 데이터 조회 모듈
+// ES Module 형식으로 작성됨
+
+// 다수 캐릭터 데이터 일괄 조회
+export function getBatchCharacterData(nicknames, rankingType = "DEAL") {
+    // 닉네임 배열 검증
+    if (!Array.isArray(nicknames) || nicknames.length === 0) {
+        console.error("유효한 닉네임 배열이 필요합니다");
+        return Promise.reject("유효한 닉네임 배열이 필요합니다");
+    }
     
-    return $.ajax({ 
-        dataType: "json",
-        type: "POST",
-        url: "/applications/process/lopecCharacterBest/",
-        data: requestData,
-        success: function(response) {
-            //console.log("달성 최고 점수");
-            return response;
-        },
-        error: function(request, status, error) {
-            console.log("LOPEC_CHARACTER_BEST 조회 실패");
-            //console.log("request.status : " + request.status);
-            //console.log("request.responseText : " + request.responseText);
-        }
-    });
-}
-
-// 랭킹 정보 읽기 (타입별)
-export function getLopecCharacterRanking(type) {
-    var atMode = "selectRanking";
-    var requestData = {
+    const atMode = "batchQueryCharacters";
+    const requestData = {
         atMode: atMode,
-        rankingType: type
-    };
-    
-    return $.ajax({ 
-        dataType: "json",
-        type: "POST",
-        url: "/applications/process/lopecCharacterBest/",
-        data: requestData,
-        success: function(response) {
-            //console.log("전체 랭킹 조회 성공");
-            return response;
-        },
-        error: function(request, status, error) {
-            console.log("LOPEC_CHARACTER_BEST_RANKING 조회 실패");
-            //console.log("request.status : " + request.status);
-        }
-    });
-}
-
-
-// 특정 캐릭터의 랭킹 정보만 조회
-export function getCharacterRankingInfo(characterNickname, rankingType) {
-    var atMode = "selectCharacterRanking";
-    var requestData = {
-        atMode: atMode,
-        rankingType: rankingType, // "DEAL" 또는 "SUP"
-        lchaCharacterNickname: characterNickname
-    };
-    
-    console.log("랭킹 조회 요청:", requestData);
-
-    return $.ajax({ 
-        dataType: "json",
-        type: "POST",
-        url: "/applications/process/lopecCharacterBest/",
-        data: requestData,
-        success: function(response) {
-            //console.log("캐릭터 랭킹 정보 조회 성공");
-            console.log("받은 응답:", response);
-            return response;
-        },
-        error: function(request, status, error) {
-            console.log("캐릭터 랭킹 정보 조회 실패");
-            //console.log("request.status : " + request.status);
-            //console.log("응답 텍스트:", request.responseText);
-            //console.log("오류 상세:", error);
-        }
-    });
-}
-
-// 해당 캐릭터의 직업 내 순위
-export function getClassRanking(rankingType, baseClass = "") {
-    var atMode = "selectClassRanking";
-    var requestData = {
-        atMode: atMode,
-        rankingType: rankingType,
-        baseClass: baseClass
-    };
-    
-    return $.ajax({ 
-        dataType: "json",
-        type: "POST",
-        url: "/applications/process/lopecCharacterBest/",
-        data: requestData,
-        success: function(response) {
-            //console.log("직업별 랭킹 조회 성공");
-            return response;
-        },
-        error: function(request, status, error) {
-            console.log("직업별 랭킹 조회 실패");
-            //console.log("상태:", request.status);
-            //console.log("오류:", error);
-        }
-    });
-}
-
-// 해당 캐릭터의 전체 랭킹 내 백분율
-export function getOverallRankingPercentile(characterNickname, rankingType = "DEAL") {
-    var atMode = "selectOverallPercentile";
-    var requestData = {
-        atMode: atMode,
-        lchaCharacterNickname: characterNickname,
+        nicknames: nicknames.join(','), // 쉼표로 구분된 문자열로 변환
         rankingType: rankingType
     };
     
-    return $.ajax({ 
-        dataType: "json",
-        type: "POST",
-        url: "/applications/process/lopecCharacterBest/",
-        data: requestData,
-        success: function(response) {
-            console.log(`${rankingType} 전체 랭킹 백분율 조회 성공`);
-            return response;
-        },
-        error: function(request, status, error) {
-            console.log(`${rankingType} 전체 랭킹 백분율 조회 실패`);
-            //console.log("상태:", request.status);
-            //console.log("오류:", error);
-        }
+    // jQuery를 쓰지만 자체 Promise로 감싸서 반환값 제어
+    return new Promise((resolve, reject) => {
+        $.ajax({ 
+            dataType: "text", // 서버에서 텍스트 형식으로 받음
+            type: "POST",
+            url: "../applications/process/lopecCharacterBest/",
+            data: requestData,
+            success: function(responseText) {
+                console.log(`${nicknames.length}개 캐릭터 정보 요청 성공, 응답 길이:`, responseText.length);
+                
+                try {
+                    // JSON 부분 추출 (PHP 오류 메시지가 포함될 수 있으므로)
+                    const jsonMatch = responseText.match(/\{.*\}/s);
+                    if (!jsonMatch) {
+                        console.error("응답에서 JSON을 찾을 수 없음:", responseText);
+                        resolve({ result: "F", data: "" }); // reject 대신 resolve로 처리
+                        return;
+                    }
+                    
+                    // JSON 파싱
+                    const response = JSON.parse(jsonMatch[0]);
+                    console.log("파싱된 응답:", response);
+                    
+                    // resolve로 결과 반환 (return 대신)
+                    resolve(response);
+                } catch (err) {
+                    console.error("응답 파싱 오류:", err, "원본 응답:", responseText);
+                    resolve({ result: "F", error: "응답 파싱 오류", data: "" });
+                }
+            },
+            error: function(request, status, error) {
+                console.log("캐릭터 일괄 데이터 조회 실패");
+                console.log("request.status : " + request.status);
+                console.log("오류 상세: " + error);
+                reject(error);
+            }
+        });
     });
 }
