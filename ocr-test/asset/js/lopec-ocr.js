@@ -12,11 +12,48 @@ const LopecOCR = (function() {
     // OCR API 엔드포인트
     const API_URL = 'https://api.upstage.ai/v1/document-ai/ocr';
     
+    // 프록시 서버 API 키 엔드포인트
+    const API_KEY_PROXY_URL = 'https://restless-art-6037.tassardar6-c0f.workers.dev'; // 프록시 서버의 API 키 제공 엔드포인트 주소
+    
     // OCR 버전 상수 정의
     const OCR_VERSIONS = {
         APPLICANT: 'applicant',    // 신청자 목록 (기존 version1)
         PARTICIPANT: 'participant' // 참가자 목록 (새로운 version2)
     };
+    
+    // ===========================================================================================
+    // 프록시 서버에서 API 키 가져오기
+    // ===========================================================================================
+    
+    /**
+     * 프록시 서버에서 OCR API 키를 가져오는 함수
+     * @returns {Promise<string>} API 키
+     * @throws {Error} API 키 가져오기 실패 시 오류
+     */
+    async function getOcrApiKey() {
+        try {
+            // 프록시 서버에 API 키 요청
+            const response = await fetch(API_KEY_PROXY_URL);
+            
+            // 응답 확인
+            if (!response.ok) {
+                throw new Error(`API 키 가져오기 실패: ${response.status} ${response.statusText}`);
+            }
+            
+            // API 키 추출
+            const data = await response.json();
+            
+            // 응답에서 API 키 확인
+            if (!data || !data.apiKey) {
+                throw new Error('프록시 서버에서 유효한 API 키를 제공하지 않았습니다');
+            }
+            
+            return data.apiKey;
+        } catch (error) {
+            console.error('OCR API 키 가져오기 오류:', error);
+            throw new Error(`API 키 가져오기 실패: ${error.message}`);
+        }
+    }
     
     // ===========================================================================================
     // 이미지 처리 관련 함수
@@ -664,7 +701,7 @@ const LopecOCR = (function() {
     /**
      * 메인 OCR 처리 함수 - 클립보드 이미지를 OCR 처리하고 캐릭터 정보 추출
      * 
-     * @param {string} apiKey - OCR API 키 ('free'인 경우 기본값 사용)
+     * @param {string} apiKey - OCR API 키 ('free'인 경우 프록시에서 가져옴, 직접 제공할 경우 해당 키 사용)
      * @param {string} version - OCR 처리 버전 (APPLICANT 또는 PARTICIPANT)
      * @param {Object} callbacks - 콜백 함수 모음
      * @param {Function} callbacks.onStatusUpdate - 상태 업데이트 콜백
@@ -675,19 +712,6 @@ const LopecOCR = (function() {
      */
     async function processClipboardImage(apiKey, version = OCR_VERSIONS.APPLICANT, callbacks = {}) {
         const { onStatusUpdate, onDebugInfo, onImageCropped, onError } = callbacks;
-        
-        // API 키 유효성 검사
-        if (!apiKey || typeof apiKey !== 'string') {
-            throw new Error('유효한 API 키가 필요합니다.');
-        }
-        
-        // 버전 유효성 검사
-        if (![OCR_VERSIONS.APPLICANT, OCR_VERSIONS.PARTICIPANT].includes(version)) {
-            throw new Error('유효한 OCR 버전이 아닙니다: ' + version);
-        }
-        
-        // 'free'로 입력된 경우 기본 API 키 사용 (HTML 인터페이스 호환성 유지)
-        const actualApiKey = apiKey === 'free' ? 'up_cdqdDDwambXqQoPoLvaHWmrWC3MO7' : apiKey;
         
         // 상태 업데이트 및 디버그 함수 초기화
         const updateStatus = (message) => {
@@ -709,6 +733,38 @@ const LopecOCR = (function() {
         };
         
         try {
+            // API 키 처리 - 프록시 서버에서 가져옴, 직접 제공된 키 사용
+            let actualApiKey;
+            
+            // apiKey가 'free'이거나 제공되지 않은 경우 프록시 서버에서 가져옴
+            if (!apiKey || apiKey === 'free') {
+                updateStatus('API 키 가져오는 중...');
+                addDebug('프록시 서버에서 API 키 요청 시작');
+                
+                try {
+                    actualApiKey = await getOcrApiKey();
+                    addDebug('프록시 서버에서 API 키 가져오기 성공');
+                } catch (keyError) {
+                    addDebug(`API 키 가져오기 실패: ${keyError.message}`);
+                    handleError(keyError);
+                    throw keyError;
+                }
+            } else {
+                // 직접 제공된 API 키 사용
+                actualApiKey = apiKey;
+                addDebug('직접 제공된 API 키 사용');
+            }
+            
+            // API 키 유효성 검사
+            if (!actualApiKey || typeof actualApiKey !== 'string') {
+                throw new Error('유효한 API 키를 가져올 수 없습니다.');
+            }
+            
+            // 버전 유효성 검사
+            if (![OCR_VERSIONS.APPLICANT, OCR_VERSIONS.PARTICIPANT].includes(version)) {
+                throw new Error('유효한 OCR 버전이 아닙니다: ' + version);
+            }
+            
             // 1. 클립보드 이미지 가져오기
             updateStatus('클립보드 이미지 가져오는 중...');
             addDebug('클립보드 이미지 요청 시작');
@@ -903,23 +959,17 @@ const LopecOCR = (function() {
                 const response = await getBatchCharacterData(nicknames, rankingType);
                 
                 // 응답 유효성 검사
-                if (!response || response.result !== "S") {
-                    console.log("서버 응답 실패 또는 형식 오류:", response);
-                    return characters;
-                }
-                
-                // 데이터가 없거나 비어있는 경우
-                if (!response.data || response.data === "" || response.data === "E") {
-                    console.log("데이터가 없거나 비어있음:", response.data);
-                    return characters;
-                }
-                
+                let dbCharacters = [];
+                let characterDataArray = [];
+                let missingNicknames = [...nicknames];
+
+                if (response && response.result === "S" && response.data && response.data !== "" && response.data !== "E") {
+
+
                 // 데이터가 문자열인지 확인
                 const dataStr = String(response.data);
                 console.log("파싱할 데이터 문자열:", dataStr);
-                
-                // 캐릭터 데이터 파싱
-                const characterDataArray = [];
+                characterDataArray = [];
                 
                 if (dataStr.includes(':')) {
                     const entries = dataStr.split(',');
@@ -960,33 +1010,31 @@ const LopecOCR = (function() {
                     }
                     
                     console.log(`${characterDataArray.length}개 캐릭터 정보 파싱 완료`);
-                } else {
-                    console.log("파싱할 수 없는 데이터 형식:", dataStr);
-                    return characters;
-                }
-                
-                // 파싱된 결과가 없으면 원본 반환
-                if (characterDataArray.length === 0) {
-                    console.log("파싱된 캐릭터 정보가 없습니다");
-                    return characters;
-                }
-                
+                } 
+
+                // DB에서 응답받지 못한 닉네임 목록 생성
+                const respondedNicknames = new Set(characterDataArray.map(data => data.LCHA_CHARACTER_NICKNAME));
+                missingNicknames = nicknames.filter(nickname => !respondedNicknames.has(nickname));
+
+                // DB 정보가 있는 캐릭터만 처리
+                dbCharacters = characterDataArray;
+            } else {
+                console.log("서버 응답 실패 or 형식 오류 : ", response);
+            }
+
                 // 진행 상황 업데이트
                 if (onProgress && typeof onProgress === 'function') {
-                    onProgress(`${characterDataArray.length}개 캐릭터 정보 조회 성공`);
+                    onProgress(`${dbCharacters.length}개 캐릭터 정보 조회 성공`);
                 }
                 
                 // 원본 캐릭터 정보에 DB 데이터 병합
                 const result = [...characters];
                 
-                // DB에서 응답받지 못한 닉네임 목록 생성 (성능을 위해 Set 사용)
-                const respondedNicknames = new Set(characterDataArray.map(data => data.LCHA_CHARACTER_NICKNAME));
-                const missingNicknames = nicknames.filter(nickname => !respondedNicknames.has(nickname));
-                
+
                 // DB 정보와 OCR 정보 병합
                 for (let i = 0; i < result.length; i++) {
                     const nickname = result[i].nickname;
-                    const dbData = characterDataArray.find(item => 
+                    const dbData = dbCharacters.find(item => 
                         item.LCHA_CHARACTER_NICKNAME === nickname
                     );
                     
@@ -1015,101 +1063,96 @@ const LopecOCR = (function() {
                 // DB에 없는 캐릭터가 있으면 백그라운드에서 처리 시작
                 if (missingNicknames.length > 0) {
                     console.log(`DB에 데이터가 없는 캐릭터 ${missingNicknames.length}개 발견:`, missingNicknames);
-                    
+
                     if (onProgress && typeof onProgress === 'function') {
-                        onProgress(`DB에 없는 캐릭터 ${missingNicknames.length}개 백그라운드 처리 중...`);
+                        onProgress(`DB에 없는 캐릭터 ${missingNicknames.length}개 순차 처리 중...`);
                     }
-                    
-                    // 각 누락된 캐릭터를 개별적으로 처리
-                    for (const nickname of missingNicknames) {
-                        // 즉시 실행 함수로 캡처
+
+                    // 순차 처리를 위한 인덱스 관리
+                    let currentIndex = 0;
+
+                    // 순차적으로 처리하는 함수
+                    const processNextCharacter = function() {
+                        // 모든 캐릭터 처리 완료 확인
+                        if (currentIndex >= missingNicknames.length) {
+                            console.log("모든 누락 캐릭터 처리 완료");
+                            return;
+                        }
+
+                        // 현재 처리할 닉네임 가져오기
+                        const nickname = missingNicknames[currentIndex];
+                        console.log(`"${nickname}" 캐릭터 정보 조회 시도... (${currentIndex + 1}/${missingNicknames.length})`);
+
+                        // 진행 상황 업데이트
+                        if (onProgress && typeof onProgress === 'function') {
+                            onProgress(`캐릭터 정보 처리 중... (${currentIndex + 1}/${missingNicknames.length})`);
+                        }
+
+                        // 즉시 실행 함수 패턴 유지 (기존 구조 유지)
                         (function(capturedNickname) {
                             console.log(`"${capturedNickname}" 캐릭터 정보 조회 시도...`);
-                            
+
                             // getCharacterProfile 호출하여 백그라운드에서 처리
-                            getCharacterProfile(capturedNickname, function() {
+                            getCharacterProfile(capturedNickname, function(profileResult) {
                                 console.log(`"${capturedNickname}" 캐릭터 정보 조회 및 DB 저장 완료`);
-                                
-                                // DB에서 최신 정보 조회 (캐릭터 정보 업데이트를 위한 콜백이 제공된 경우)
+
+                                // 캐릭터 정보 업데이트를 위한 콜백이 제공된 경우
                                 if (onCharacterUpdate && typeof onCharacterUpdate === 'function') {
-                                    // DB에서 업데이트된 정보 조회
-                                    getBatchCharacterData([capturedNickname], rankingType)
-                                        .then(updatedResponse => {
-                                            if (updatedResponse && updatedResponse.result === "S" && updatedResponse.data) {
-                                                const updatedDataStr = String(updatedResponse.data);
-                                                
-                                                if (updatedDataStr.includes(':')) {
-                                                    const updatedEntries = updatedDataStr.split(',');
-                                                    if (updatedEntries.length > 0) {
-                                                        const updatedParts = updatedEntries[0].split(':');
-                                                        
-                                                        if (updatedParts.length >= 4) {
-                                                            const level = updatedParts[1] || "";
-                                                            const characterClass = updatedParts[2] || "";
-                                                            const totalSum = updatedParts[3] || "";
-                                                            const totalSumSupport = updatedParts[4] || "";
-                                                            const regDate = updatedParts[5] || "";
-                                                            
-                                                            const isSupport = characterClass.includes("서폿");
-                                                            const displayScore = isSupport ? totalSumSupport : totalSum;
-                                                            
-                                                            const updatedCharData = {
-                                                                LCHA_CHARACTER_NICKNAME: capturedNickname,
-                                                                LCHA_LEVEL: level,
-                                                                LCHA_CHARACTER_CLASS: characterClass,
-                                                                LCHA_TOTALSUM: totalSum,
-                                                                LCHA_TOTALSUMSUPPORT: totalSumSupport,
-                                                                IS_SUPPORT: isSupport,
-                                                                DISPLAY_SCORE: displayScore,
-                                                                REG_DATE: regDate
-                                                            };
-                                                            
-                                                            // 업데이트된 정보로 콜백 호출
-                                                            onCharacterUpdate(capturedNickname, {
-                                                                itemLevel: level,
-                                                                characterClass: characterClass,
-                                                                isSupport: isSupport,
-                                                                displayScore: displayScore,
-                                                                dbInfo: updatedCharData,
-                                                                hasDbInfo: true,
-                                                                isProcessing: false
-                                                            });
-                                                            
-                                                            console.log(`"${capturedNickname}" 캐릭터 정보 업데이트 완료`);
-                                                            return;
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                // 데이터 형식이 잘못되었거나 파싱 실패
-                                                onCharacterUpdate(capturedNickname, { 
-                                                    hasDbInfo: false, 
-                                                    isProcessing: false,
-                                                    error: "데이터 형식 오류"
-                                                });
-                                            } else {
-                                                // 서버 응답 실패
-                                                onCharacterUpdate(capturedNickname, { 
-                                                    hasDbInfo: false, 
-                                                    isProcessing: false,
-                                                    error: "서버 응답 실패" 
-                                                });
-                                            }
-                                        })
-                                        .catch(error => {
-                                            console.error(`"${capturedNickname}" 정보 업데이트 중 오류:`, error);
-                                            onCharacterUpdate(capturedNickname, { 
-                                                hasDbInfo: false, 
-                                                isProcessing: false,
-                                                error: error.message 
-                                            });
+                                    if (profileResult) {
+                                        // profileResult에서 필요한 정보 추출
+                                        const level = profileResult.itemLevel ? profileResult.itemLevel.toString() : "";
+                                        const characterClass = profileResult.characterClass || "";
+                                        const totalSum = profileResult.totalSum ? profileResult.totalSum.toString() : "";
+                                        const totalSumSupport = profileResult.totalSumSupport ? profileResult.totalSumSupport.toString() : "";
+                                        const isSupport = profileResult.isSupport;
+                                        const displayScore = isSupport ? totalSumSupport : totalSum;
+
+                                        // DB 형식과 동일한 구조로 데이터 구성
+                                        const updatedCharData = {
+                                            LCHA_CHARACTER_NICKNAME: capturedNickname,
+                                            LCHA_LEVEL: level,
+                                            LCHA_CHARACTER_CLASS: characterClass,
+                                            LCHA_TOTALSUM: totalSum,
+                                            LCHA_TOTALSUMSUPPORT: totalSumSupport,
+                                            IS_SUPPORT: isSupport,
+                                            DISPLAY_SCORE: displayScore,
+                                            REG_DATE: profileResult.regDate || new Date().toISOString()
+                                        };
+
+                                        // 업데이트된 정보로 콜백 호출
+                                        onCharacterUpdate(capturedNickname, {
+                                            itemLevel: level,
+                                            characterClass: characterClass,
+                                            isSupport: isSupport,
+                                            displayScore: displayScore,
+                                            dbInfo: updatedCharData,
+                                            hasDbInfo: true,
+                                            isProcessing: false
                                         });
+
+                                        console.log(`"${capturedNickname}" 캐릭터 정보 업데이트 완료 (DB 재호출 없이)`);
+                                    } else {
+                                        onCharacterUpdate(capturedNickname, { 
+                                            hasDbInfo: false, 
+                                            isProcessing: false,
+                                            error: "계산 결과가 없습니다" 
+                                        });
+                                    }
+                                } else {
+                                    console.warn(`"${capturedNickname}" onCharacterUpdate 콜백이 없거나 함수가 아닙니다:`, onCharacterUpdate);
                                 }
+
+                                // 인덱스 증가 및 다음 캐릭터 처리 (1초 지연)
+                                currentIndex++;
+                                setTimeout(processNextCharacter, 1000);
                             });
-                        })(nickname);
-                    }
+                        })(nickname); // 즉시 실행 함수에 닉네임 전달 (이 부분 유지)
+                    };
+
+                    // 첫 번째 캐릭터 처리 시작
+                    processNextCharacter();
                 }
-                
+
                 return result;
                 
             } catch (error) {
@@ -1132,7 +1175,7 @@ const LopecOCR = (function() {
     return {
         /**
          * 클립보드에서 이미지를 가져와 OCR 처리 후 캐릭터 정보를 추출하는 함수
-         * @param {string} apiKey - OCR API 키 ('free'인 경우 기본값 사용)
+         * @param {string} apiKey - OCR API 키 ('free'인 경우 프록시에서 가져옴, 직접 제공할 경우 해당 키 사용)
          * @param {string} version - OCR 처리 버전
          * @param {Object} callbacks - 콜백 함수들
          * @returns {Promise<Array>} 추출된 캐릭터 정보 배열

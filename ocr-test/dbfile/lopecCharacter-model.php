@@ -395,7 +395,7 @@ class modelLopecCharacter extends coreUnion {
 		try {
 			$retQuery .= " SELECT LCHB_CHARACTER_NICKNAME, LCHB_CHARACTER_CLASS,";
 			$retQuery .= " LCHB_TOTALSUM, RANKING_NUM";
-			$retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_DEAL";
+			$retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_DEAL_TOP100";
 			$retQuery .= " WHERE RANKING_NUM IS NOT NULL";  // 유효한 랭킹 번호가 있는 데이터만 선택
 			$retQuery .= " ORDER BY RANKING_NUM ASC";  // 랭킹 순서대로 정렬
 			$retQuery .= " LIMIT 100";  // 상위 20명만 선택
@@ -416,7 +416,7 @@ class modelLopecCharacter extends coreUnion {
 		try {
 			$retQuery .= " SELECT LCHB_CHARACTER_NICKNAME, LCHB_CHARACTER_CLASS,";
 			$retQuery .= " LCHB_TOTALSUM, RANKING_NUM";
-			$retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_SUP";
+			$retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_SUP_TOP100";
 			$retQuery .= " WHERE RANKING_NUM IS NOT NULL";  // 유효한 랭킹 번호가 있는 데이터만 선택
 			$retQuery .= " ORDER BY RANKING_NUM ASC";  // 랭킹 순서대로 정렬
 			$retQuery .= " LIMIT 100";  // 상위 20명만 선택
@@ -429,32 +429,39 @@ class modelLopecCharacter extends coreUnion {
 
 	
 	/* **********************************************************************************************************************
+	 * function name    : selectRankingMetadata
+	 * description     : LOPEC_RANKING_METADATA 테이블에서 랭킹 타입별 메타데이터 조회
+	 * @param          : $rankingType    랭킹 타입 (DEAL/SUP)
+	 * @return         : $retQuery      full query
+	 ********************************************************************************************************************** */
+	function selectRankingMetadata() {
+	    $retQuery = "";
+	    try {
+	        $retQuery .= " SELECT ranking_type, total_count ";
+	        $retQuery .= " FROM LOPEC_RANKING_METADATA ";
+	        $retQuery .= " WHERE ranking_type = ? ";
+	    } catch (Exception $e) {
+	        $logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectRankingMetadata - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+	        die($e->getMessage());
+	    }
+	    return $retQuery;
+	}
+
+	/* **********************************************************************************************************************
 	 * function name    : selectOverallRankingPercentile
-	 * description     : DEAL 랭킹에서의 백분율 계산
+	 * description     : DEAL 랭킹에서의 백분율 계산 (메타데이터 테이블 활용)
 	 * @param          : $characterNickname    캐릭터 닉네임
 	 * @return         : $retQuery            full query
 	 ********************************************************************************************************************** */
 	function selectOverallRankingPercentile() {
 	    $retQuery = "";
 	    try {
-	        $retQuery .= " WITH RankedData AS ( ";
-	        $retQuery .= "     SELECT ";
-	        $retQuery .= "         LCHB_CHARACTER_NICKNAME, ";
-	        $retQuery .= "         LCHB_TOTALSUM, ";
-	        $retQuery .= "         RANK() OVER (ORDER BY LCHB_TOTALSUM DESC) as OVERALL_RANK, ";
-	        $retQuery .= "         COUNT(*) OVER () as TOTAL_CHARACTERS ";
-	        $retQuery .= "     FROM LOPEC_CHARACTER_BEST_RANKING_DEAL ";
-	        $retQuery .= "     WHERE RANKING_NUM IS NOT NULL ";
-	        $retQuery .= " ) ";
-	        $retQuery .= " SELECT ";
-	        $retQuery .= "     LCHB_CHARACTER_NICKNAME, ";
-	        $retQuery .= "     LCHB_TOTALSUM, ";
-	        $retQuery .= "     OVERALL_RANK, ";
-	        $retQuery .= "     TOTAL_CHARACTERS, ";
-	        $retQuery .= "     ROUND(OVERALL_RANK * 100.0 / TOTAL_CHARACTERS, 2) as OVERALL_PERCENTILE ";
-	        $retQuery .= " FROM RankedData ";
-	        $retQuery .= " WHERE LCHB_CHARACTER_NICKNAME = ? ";
-		
+	        // 캐릭터의 랭킹 정보 및 메타데이터를 활용한 백분율 계산
+	        $retQuery .= " SELECT r.LCHB_CHARACTER_NICKNAME, r.LCHB_TOTALSUM, r.RANKING_NUM, ";
+	        $retQuery .= " (SELECT total_count FROM LOPEC_RANKING_METADATA WHERE ranking_type = 'DEAL') as TOTAL_CHARACTERS, ";
+	        $retQuery .= " ROUND((r.RANKING_NUM / (SELECT total_count FROM LOPEC_RANKING_METADATA WHERE ranking_type = 'DEAL')) * 100, 2) as PERCENTILE ";
+	        $retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_DEAL r ";
+	        $retQuery .= " WHERE r.LCHB_CHARACTER_NICKNAME = ? ";
 	    } catch (Exception $e) {
 	        $logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectOverallRankingPercentile - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
 	        die($e->getMessage());
@@ -463,36 +470,25 @@ class modelLopecCharacter extends coreUnion {
 	}
 
 	/* **********************************************************************************************************************
-	* function name    : selectOverallRankingPercentileSup
-	* description     : SUP 랭킹에서의 백분율 계산
-	* @return         : $retQuery    full query
-	********************************************************************************************************************** */
+	 * function name    : selectOverallRankingPercentileSup
+	 * description     : SUP 랭킹에서의 백분율 계산 (메타데이터 테이블 활용)
+	 * @param          : $characterNickname    캐릭터 닉네임
+	 * @return         : $retQuery            full query
+	 ********************************************************************************************************************** */
 	function selectOverallRankingPercentileSup() {
-		$retQuery = "";
-		try {
-			$retQuery .= " WITH RankedData AS ( ";
-			$retQuery .= "     SELECT ";
-			$retQuery .= "         LCHB_CHARACTER_NICKNAME, ";
-			$retQuery .= "         LCHB_TOTALSUM, ";
-			$retQuery .= "         RANK() OVER (ORDER BY LCHB_TOTALSUM DESC) as OVERALL_RANK, ";
-			$retQuery .= "         COUNT(*) OVER () as TOTAL_CHARACTERS ";
-			$retQuery .= "     FROM LOPEC_CHARACTER_BEST_RANKING_SUP ";
-			$retQuery .= "     WHERE RANKING_NUM IS NOT NULL ";
-			$retQuery .= " ) ";
-			$retQuery .= " SELECT ";
-			$retQuery .= "     LCHB_CHARACTER_NICKNAME, ";
-			$retQuery .= "     LCHB_TOTALSUM, ";
-			$retQuery .= "     OVERALL_RANK, ";
-			$retQuery .= "     TOTAL_CHARACTERS, ";
-			$retQuery .= "     ROUND(OVERALL_RANK * 100.0 / TOTAL_CHARACTERS, 2) as OVERALL_PERCENTILE ";
-			$retQuery .= " FROM RankedData ";
-			$retQuery .= " WHERE LCHB_CHARACTER_NICKNAME = ? ";
-			
-		} catch (Exception $e) {
-			$logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectOverallRankingPercentileSup - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
-			die($e->getMessage());
-		}
-		return $retQuery;
+	    $retQuery = "";
+	    try {
+	        // 캐릭터의 랭킹 정보 및 메타데이터를 활용한 백분율 계산
+	        $retQuery .= " SELECT r.LCHB_CHARACTER_NICKNAME, r.LCHB_TOTALSUM, r.RANKING_NUM, ";
+	        $retQuery .= " (SELECT total_count FROM LOPEC_RANKING_METADATA WHERE ranking_type = 'SUP') as TOTAL_CHARACTERS, ";
+	        $retQuery .= " ROUND((r.RANKING_NUM / (SELECT total_count FROM LOPEC_RANKING_METADATA WHERE ranking_type = 'SUP')) * 100, 2) as PERCENTILE ";
+	        $retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_SUP r ";
+	        $retQuery .= " WHERE r.LCHB_CHARACTER_NICKNAME = ? ";
+	    } catch (Exception $e) {
+	        $logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectOverallRankingPercentileSup - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+	        die($e->getMessage());
+	    }
+	    return $retQuery;
 	}
 	
 	/* **********************************************************************************************************************
@@ -585,15 +581,6 @@ class modelLopecCharacter extends coreUnion {
 
 
 
-
-
-
-
-
-
-
-
-
 	/* **********************************************************************************************************************
 	 * function name    : selectSingleCharacterRankingDeal
 	 * description     : LOPEC_CHARACTER_BEST_RANKING_DEAL 테이블에서 특정 캐릭터의 랭킹 정보 조회
@@ -632,9 +619,71 @@ class modelLopecCharacter extends coreUnion {
 
 
 
+	/* **********************************************************************************************************************
+	 * function name    : selectCharacterClassRankingDeal
+	 * description     : 특정 캐릭터의 DEAL 직업 내 순위 정보 조회
+	 * @return         : $retQuery    full query
+	 ********************************************************************************************************************** */
+	function selectCharacterClassRankingDeal() {
+    	$retQuery = "";
+    	try {
+    	    // 기본 정보 및 직업 내 순위 조회
+    	    $retQuery .= " SELECT c.LCHB_CHARACTER_NICKNAME, c.LCHB_CHARACTER_CLASS, ";
+    	    $retQuery .= " c.LCHB_TOTALSUM, m.BASE_CLASS, ";
+		
+    	    // 직업 내 해당 캐릭터보다 점수가 높거나 같은 캐릭터 수 계산 (순위 계산용)
+    	    $retQuery .= " (SELECT COUNT(*) FROM LOPEC_CHARACTER_BEST_RANKING_DEAL r ";
+    	    $retQuery .= "  JOIN LOPEC_CLASS_MAPPING m2 ON r.LCHB_CHARACTER_CLASS = m2.DETAIL_CLASS ";
+    	    $retQuery .= "  WHERE m2.BASE_CLASS = m.BASE_CLASS AND r.LCHB_TOTALSUM >= c.LCHB_TOTALSUM) as CLASS_RANK, ";
+		
+    	    // 직업 내 전체 캐릭터 수 계산 (백분율 계산용)
+    	    $retQuery .= " (SELECT COUNT(*) FROM LOPEC_CHARACTER_BEST_RANKING_DEAL r ";
+    	    $retQuery .= "  JOIN LOPEC_CLASS_MAPPING m2 ON r.LCHB_CHARACTER_CLASS = m2.DETAIL_CLASS ";
+    	    $retQuery .= "  WHERE m2.BASE_CLASS = m.BASE_CLASS) as TOTAL_IN_CLASS ";
+		
+    	    // 메인 쿼리
+    	    $retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_DEAL c ";
+    	    $retQuery .= " JOIN LOPEC_CLASS_MAPPING m ON c.LCHB_CHARACTER_CLASS = m.DETAIL_CLASS ";
+    	    $retQuery .= " WHERE c.LCHB_CHARACTER_NICKNAME = ? ";
+    	} catch (Exception $e) {
+    	    $logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectCharacterClassRankingDeal - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+    	    die($e->getMessage());
+    	}
+    	return $retQuery;
+		}
 
-
-
+	/* ***************************************************************
+	 * function name    : selectCharacterClassRankingSup
+	 * description     : 특정 캐릭터의 SUP 직업 내 순위 정보 조회
+	 * @return         : $retQuery    full query
+	 ************************************************************** */
+	function selectCharacterClassRankingSup() {
+	    $retQuery = "";
+	    try {
+	        // 기본 정보 및 직업 내 순위 조회
+	        $retQuery .= " SELECT c.LCHB_CHARACTER_NICKNAME, c.LCHB_CHARACTER_CLASS, ";
+	        $retQuery .= " c.LCHB_TOTALSUM, m.BASE_CLASS, ";
+		
+	        // 직업 내 해당 캐릭터보다 점수가 높거나 같은 캐릭터 수 계산 (순위 계산용)
+	        $retQuery .= " (SELECT COUNT(*) FROM LOPEC_CHARACTER_BEST_RANKING_SUP r ";
+	        $retQuery .= "  JOIN LOPEC_CLASS_MAPPING m2 ON r.LCHB_CHARACTER_CLASS = m2.DETAIL_CLASS ";
+	        $retQuery .= "  WHERE m2.BASE_CLASS = m.BASE_CLASS AND r.LCHB_TOTALSUM >= c.LCHB_TOTALSUM) as CLASS_RANK, ";
+		
+	        // 직업 내 전체 캐릭터 수 계산 (백분율 계산용)
+	        $retQuery .= " (SELECT COUNT(*) FROM LOPEC_CHARACTER_BEST_RANKING_SUP r ";
+	        $retQuery .= "  JOIN LOPEC_CLASS_MAPPING m2 ON r.LCHB_CHARACTER_CLASS = m2.DETAIL_CLASS ";
+	        $retQuery .= "  WHERE m2.BASE_CLASS = m.BASE_CLASS) as TOTAL_IN_CLASS ";
+		
+	        // 메인 쿼리
+	        $retQuery .= " FROM LOPEC_CHARACTER_BEST_RANKING_SUP c ";
+	        $retQuery .= " JOIN LOPEC_CLASS_MAPPING m ON c.LCHB_CHARACTER_CLASS = m.DETAIL_CLASS ";
+	        $retQuery .= " WHERE c.LCHB_CHARACTER_NICKNAME = ? ";
+	    } catch (Exception $e) {
+	        $logMsg = " | ".date("Y-m-d H:i:s")." | modelLopecCharacter => selectCharacterClassRankingSup - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+	        die($e->getMessage());
+	    }
+	    return $retQuery;
+	}
 
 
 

@@ -344,12 +344,6 @@ class controllerLopecCharacter extends coreProcess {
 
 
 
-
-
-
-
-
-
 	/* **********************************************************************************************************************
 	 * function name    : selectLopecCharacterBest
 	 * description     : LOPEC_CHARACTER_BEST에서 캐릭터 최고 점수 정보 조회
@@ -377,24 +371,24 @@ class controllerLopecCharacter extends coreProcess {
 	 * @param          : $bindData    Array(조회수, 시작번호)
 	 * @return         : $retResult   array data
 	 ********************************************************************************************************************** */
-function selectLopecCharacterRanking($rankingType = "DEAL") {
-    try {
-        $modelLopecCharacter = new modelLopecCharacter();
-        
-        if ($rankingType == "SUP") {
-            $query = $modelLopecCharacter->selectLopecCharacterRankingSup();
-        } else {
-            $query = $modelLopecCharacter->selectLopecCharacterRankingDeal();
-        }
-        
-        $retResult = $this->selectListBindPdo($query, array());
-    } catch (Exception $e) {
-        $retResult = "EE";
-        $logMsg = " | ".date("Y-m-d H:i:s")." | controllerLopecCharacter => selectLopecCharacterRanking - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
-        die($e->getMessage());
-    }
-    return $retResult;
-}
+	function selectLopecCharacterRanking($rankingType = "DEAL") {
+	    try {
+	        $modelLopecCharacter = new modelLopecCharacter();
+		
+	        if ($rankingType == "SUP") {
+	            $query = $modelLopecCharacter->selectLopecCharacterRankingSup();
+	        } else {
+	            $query = $modelLopecCharacter->selectLopecCharacterRankingDeal();
+	        }
+		
+	        $retResult = $this->selectListBindPdo($query, array());
+	    } catch (Exception $e) {
+	        $retResult = "EE";
+	        $logMsg = " | ".date("Y-m-d H:i:s")." | controllerLopecCharacter => selectLopecCharacterRanking - try~catch error : ".$e->getCode()." | ".$e->getMessage()." | ";
+	        die($e->getMessage());
+	    }
+	    return $retResult;
+	}
 
 
 	/* **********************************************************************************************************************
@@ -443,10 +437,12 @@ function selectLopecCharacterRanking($rankingType = "DEAL") {
 	        $modelLopecCharacter = new modelLopecCharacter();
 	        $bindData = array($characterNickname);
 		
+	        // 랭킹 타입에 따른 쿼리 선택
 	        $query = ($rankingType == "SUP") ? 
 	            $modelLopecCharacter->selectOverallRankingPercentileSup() : 
 	            $modelLopecCharacter->selectOverallRankingPercentile();
 		
+	        // 백분율 정보 조회
 	        $retResult = $this->selectViewBindPdo($query, $bindData);
 		
 	    } catch (Exception $e) {
@@ -529,12 +525,6 @@ function selectLopecCharacterRanking($rankingType = "DEAL") {
 	}
 
 
-
-
-
-
-
-	
 
 	/* **********************************************************************************************************************
 	 * function name		:	updateLopecCharacter
@@ -751,11 +741,22 @@ function selectLopecCharacterRanking($rankingType = "DEAL") {
 	        if ($characterBestData && isset($characterBestData['LCHB_CHARACTER_CLASS'])) {
 	            $baseClass = $characterBestData['LCHB_CHARACTER_CLASS'];
 	        }
-	        $classRankingData = $this->selectClassRanking($rankingType, $baseClass);
-	        $combinedResult['classRanking'] = $classRankingData ? $classRankingData : null;
+			$characterClassRankingData = $this->selectCharacterClassRanking($rankingType, $characterNickname);
+			$combinedResult['classRanking'] = $characterClassRankingData ? $characterClassRankingData : null;
 	        
-	        // 4. 전체 랭킹 내 백분율 정보 조회
+	        // 4. 전체 랭킹 내 백분율 정보 조회 (메타데이터 테이블 활용)
 	        $percentileData = $this->selectOverallRankingPercentile($characterNickname, $rankingType);
+	        
+	        // 필드명 변경에 따른 데이터 매핑 (클라이언트 호환성 유지)
+	        if($percentileData && isset($percentileData['PERCENTILE']) && !isset($percentileData['OVERALL_PERCENTILE'])) {
+	            $percentileData['OVERALL_PERCENTILE'] = $percentileData['PERCENTILE'];
+	        }
+	        
+	        // 랭킹 데이터 일관성 처리
+	        if($percentileData && isset($percentileData['RANKING_NUM']) && !isset($percentileData['OVERALL_RANK'])) {
+	            $percentileData['OVERALL_RANK'] = $percentileData['RANKING_NUM'];
+	        }
+	        
 	        $combinedResult['percentile'] = $percentileData ? $percentileData : null;
 	        
 	        return $combinedResult;

@@ -290,6 +290,17 @@ try {
                 
                 if($percentileData) {
                     $result = "S";
+                    
+                    // 필드명 변경에 따른 데이터 매핑 (클라이언트 호환성 유지)
+                    if(isset($percentileData['PERCENTILE']) && !isset($percentileData['OVERALL_PERCENTILE'])) {
+                        $percentileData['OVERALL_PERCENTILE'] = $percentileData['PERCENTILE'];
+                    }
+                    
+                    // 랭킹 데이터 일관성 처리
+                    if(isset($percentileData['RANKING_NUM']) && !isset($percentileData['OVERALL_RANK'])) {
+                        $percentileData['OVERALL_RANK'] = $percentileData['RANKING_NUM'];
+                    }
+                    
                     $data = $percentileData;
                 } else {
                     $result = "F";

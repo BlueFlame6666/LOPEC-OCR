@@ -2,30 +2,43 @@ import 'https://code.jquery.com/jquery-3.6.0.min.js';
 
 
 
-// 필터
-import {
-    keywordList,
-    grindingFilter,
-    arkFilter,
-    bangleJobFilter,
-    engravingImg,
-    engravingCalFilter,
-    calAccessoryFilter,
-    elixirFilter,
-    bangleFilter,
-    engravingCheckFilter,
-    stoneCheckFilter,
-    elixirCalFilter,
-    arkCalFilter,
-    classGemFilter,
-} from '/asset/filter/filter.js';
+/* **********************************************************************************************************************
+    * name		             :	 import filter
+    * description	         : 	 필요한 필터 및 함수 import
+    * keywordList            :   엘릭서 부위별 레벨 추출용 키워드 필터
+    * elixirFilter           :   엘릭서 총합 레벨 계산을 위한 필터
+    * elixirCalFilter        :   엘릭서 옵션별 수치 필터
+    * arkFilter              :   2차 전직 (아크패시브) 구분용 필터
+    * engravingCalFilter     :   무효 각인 필터
+    * calAccessoryFilter     :   악세서리 옵션별 수치 필터
+    * bangleFilter           :   팔찌 옵션 필터
+    * engravingCheckFilter   :   각인 옵션 필터
+    * stoneCheckFilter       :   어빌리티스톤 옵션 필터
+    * classGemFilter         :   직업별 보석 딜 지분율 필터
+    * insertLopecCharacters  :   캐릭터 DB 저장용 함수
+    *********************************************************************************************************************** */
+    import {
+        keywordList,
+        elixirFilter,
+        elixirCalFilter,
+        arkFilter,
+        engravingCalFilter,
+        calAccessoryFilter,
+        bangleFilter,
+        engravingCheckFilter,
+        stoneCheckFilter,
+        classGemFilter,
+    } from '/asset/filter/filter.js';
+    
+    import { 
+        insertLopecCharacters 
+    } from '/asset/js/character.js'
 
 
-
-// db저장 스크립트
-import { insertLopecCharacters } from '/asset/js/character.js'
-
-
+/* **********************************************************************************************************************
+    * name		        :	import
+    * description	    : 	필요한 필터 및 함수 import
+    *********************************************************************************************************************** */
 //   api 동작 스크립트
 let isRequesting = false;
 
@@ -273,92 +286,6 @@ export function getCharacterProfile(inputName, callback) {
                     }
                 }
             }
-            // console.log(bangleOptionArry)
-
-
-            function bangleArryFnc(bangleArry) {
-                bangleArry.forEach(function (arry, bangleIdx) {
-
-                    // 팔찌 옵션 상중하에 따른 점수
-                    bangleFilter.forEach(function (filterArry) {
-
-                        if (filterArry.name == arry) {
-                            if (bangleArry[bangleIdx + 1] == filterArry.option) {
-                                //filterTierCheck(filterArry.tier)
-                                // console.log(filterArry.tier)
-                            } else if (filterArry.option == null) {
-                                //filterTierCheck(filterArry.tier)
-                                // console.log(filterArry.tier)
-                            }
-
-                        }
-
-                    })
-
-
-                    // 치명 특화 신속 스텟 팔찌 점수 부여
-                    bangeleStatsUse.forEach(function (statsArry) {
-
-                        let regex = new RegExp(`${statsArry} \\+\\d+`);
-                        // console.log(statsArry+":"+regex.test(optionArry))
-
-                        if (regex.test(arry)) {
-                            // console.log(arry)
-                            let statsNumber = arry.replace(/\D/g, '');
-                            banglePoint += statsNumber * statsPercent
-
-                        }
-                    });
-
-
-
-
-                    bangleSpecialStats.forEach(function (statsArry) {
-                        let regex = new RegExp(`${statsArry} \\+\\d+`);
-                        if (regex.test(arry)) {
-                            let val = arry.replace(/\D/g, '')
-                            // console.log(val)
-                            // console.log(Math.round(bangleSpStats(val)))
-                            banglePoint += Math.round(bangleSpStats(val)) //4티어 힘민지 점수
-                        }
-                    });
-
-                    // 직업별 힘,민첩,지능 점수     
-                    function bangleSpStats(spStatsVal) {
-                        let result = 0
-                        bangleJobFilter.forEach(function (jobArry) {
-
-                            if (jobCheck() == jobArry.job && jobArry.tier == 4) {
-                                let pow = (jobArry.option == "pow")
-                                let dex = (jobArry.option == "dex")
-                                let int = (jobArry.option == "int")
-                                if (pow) {
-                                    result = spStatsVal * 1.5
-                                } else if (dex) {
-                                    result = spStatsVal * 1.5
-                                } else if (int) {
-                                    result = spStatsVal * 1.5
-                                } else {
-                                    result = 0
-                                }
-                            } else {
-                                result = 0
-                            }
-                        })
-                        return result
-
-                    }
-                })
-
-            }
-
-
-            // console.log("팔찌점수:"+banglePoint)
-
-
-
-
-
 
             // -----------------------계산식 함수 끝-----------------------------------
             // -----------------------계산식 함수 끝-----------------------------------
@@ -2064,22 +1991,6 @@ export function getCharacterProfile(inputName, callback) {
             let fullBuffPower = ((afterFullBuff - beforeBuff) / beforeBuff) * 100
 
 
-            //console.log("최종 공증" + finalAtkBuff)
-            //console.log("진피" + evolutionBuff)
-            //console.log("낙인력" + finalStigmaPer)
-            //console.log("최종 피증" + finalDamageBuff)
-            //console.log("팔찌 추가" + (bangleObj.atkBuffPlus/100+1))
-            //console.log("풀버프 전" + beforeBuff)
-            //console.log("풀버프 후" + afterFullBuff)
-
-
-
-
-            //console.log(bangleObj.atkBuff/100+1)
-            //console.log(bangleObj.atkBuffPlus/100+1)
-            //console.log((bangleObj.damageBuff/100)/30+1)
-            //console.log((bangleObj.special*0.017/100+1))
-            //console.log((bangleObj.haste*0.017/100+1))
 
             // 4티어 서폿 최종 스펙포인트1
             let supportSpecPoint = (fullBuffPower ** 2.546) * 20 * enlightBuffResult * arkObj.leapDamage * engObj.engBonusPer * ((1 / (1 - gemsCoolAvg / 100) - 1) + 1)
@@ -2235,7 +2146,24 @@ export function getCharacterProfile(inputName, callback) {
 
 
             if (callback) {
-                callback(); // 적절한 결과 객체와 함께 콜백 호출
+                const now = new Date();
+                const formattedDate = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0') +
+                String(now.getSeconds()).padStart(2, '0');
+
+                const profileResult = {
+                    itemLevel: parseFloat(data.ArmoryProfile.ItemMaxLevel.replace(/,/g, '')),                              // 아이템 레벨  
+                    characterClass: supportCheck() + " " + data.ArmoryProfile.CharacterClassName,                     // 직업명
+                    totalSum: (highTierSpecPointObj.dealerlastFinalValue).toFixed(0),     // 딜러 점수
+                    totalSumSupport: (highTierSpecPointObj.supportSpecPoint).toFixed(0),  // 서포터 점수
+                    isSupport: supportCheck() == "서폿",         // 서포터 여부
+                    regDate: formattedDate             // 등록 일시
+                };
+                
+                callback(profileResult);
             }
         }
 
