@@ -1,0 +1,402 @@
+{
+  "1": {
+    "character": "귤",
+    "file_path": "./screenshot/cropped\\1.webp"
+  },
+  "2": {
+    "character": "검",
+    "file_path": "./screenshot/cropped\\2.webp"
+  },
+  "3": {
+    "character": "은",
+    "file_path": "./screenshot/cropped\\3.webp"
+  },
+  "4": {
+    "character": "연",
+    "file_path": "./screenshot/cropped\\4.webp"
+  },
+  "5": {
+    "character": "주",
+    "file_path": "./screenshot/cropped\\5.webp"
+  },
+  "6": {
+    "character": "먹",
+    "file_path": "./screenshot/cropped\\6.webp"
+  },
+  "7": {
+    "character": "으",
+    "file_path": "./screenshot/cropped\\7.webp"
+  },
+  "8": {
+    "character": "면",
+    "file_path": "./screenshot/cropped\\8.webp"
+  },
+  "9": {
+    "character": "서",
+    "file_path": "./screenshot/cropped\\9.webp"
+  },
+  "10": {
+    "character": "내",
+    "file_path": "./screenshot/cropped\\10.webp"
+  },
+  "11": {
+    "character": "실",
+    "file_path": "./screenshot/cropped\\11.webp"
+  },
+  "12": {
+    "character": "해",
+    "file_path": "./screenshot/cropped\\12.webp"
+  },
+  "13": {
+    "character": "요",
+    "file_path": "./screenshot/cropped\\13.webp"
+  },
+  "14": {
+    "character": "갍",
+    "file_path": "./screenshot/cropped\\14.jpg"
+  },
+  "15": {
+    "character": "갎",
+    "file_path": "./screenshot/cropped\\15.jpg"
+  },
+  "16": {
+    "character": "갏",
+    "file_path": "./screenshot/cropped\\16.jpg"
+  },
+  "17": {
+    "character": "감",
+    "file_path": "./screenshot/cropped\\17.jpg"
+  },
+  "18": {
+    "character": "갑",
+    "file_path": "./screenshot/cropped\\18.jpg"
+  },
+  "19": {
+    "character": "값",
+    "file_path": "./screenshot/cropped\\19.jpg"
+  },
+  "20": {
+    "character": "갓",
+    "file_path": "./screenshot/cropped\\20.jpg"
+  },
+  "21": {
+    "character": "갔",
+    "file_path": "./screenshot/cropped\\21.jpg"
+  },
+  "22": {
+    "character": "강",
+    "file_path": "./screenshot/cropped\\22.jpg"
+  },
+  "23": {
+    "character": "갖",
+    "file_path": "./screenshot/cropped\\23.jpg"
+  },
+  "24": {
+    "character": "갗",
+    "file_path": "./screenshot/cropped\\24.jpg"
+  },
+  "25": {
+    "character": "갘",
+    "file_path": "./screenshot/cropped\\25.jpg"
+  },
+  "26": {
+    "character": "같",
+    "file_path": "./screenshot/cropped\\26.jpg"
+  },
+  "27": {
+    "character": "갚",
+    "file_path": "./screenshot/cropped\\27.jpg"
+  },
+  "28": {
+    "character": "갛",
+    "file_path": "./screenshot/cropped\\28.jpg"
+  },
+  "29": {
+    "character": "개",
+    "file_path": "./screenshot/cropped\\29.jpg"
+  },
+  "30": {
+    "character": "객",
+    "file_path": "./screenshot/cropped\\30.jpg"
+  },
+  "31": {
+    "character": "갞",
+    "file_path": "./screenshot/cropped\\31.jpg"
+  },
+  "32": {
+    "character": "갟",
+    "file_path": "./screenshot/cropped\\32.jpg"
+  },
+  "33": {
+    "character": "갠",
+    "file_path": "./screenshot/cropped\\33.jpg"
+  },
+  "34": {
+    "character": "갡",
+    "file_path": "./screenshot/cropped\\34.jpg"
+  },
+  "35": {
+    "character": "갢",
+    "file_path": "./screenshot/cropped\\35.jpg"
+  },
+  "36": {
+    "character": "갣",
+    "file_path": "./screenshot/cropped\\36.jpg"
+  },
+  "37": {
+    "character": "갤",
+    "file_path": "./screenshot/cropped\\37.jpg"
+  },
+  "38": {
+    "character": "갥",
+    "file_path": "./screenshot/cropped\\38.jpg"
+  },
+  "39": {
+    "character": "갦",
+    "file_path": "./screenshot/cropped\\39.jpg"
+  },
+  "40": {
+    "character": "갧",
+    "file_path": "./screenshot/cropped\\40.jpg"
+  },
+  "41": {
+    "character": "갨",
+    "file_path": "./screenshot/cropped\\41.jpg"
+  },
+  "42": {
+    "character": "갩",
+    "file_path": "./screenshot/cropped\\42.jpg"
+  },
+  "43": {
+    "character": "갪",
+    "file_path": "./screenshot/cropped\\43.jpg"
+  },
+  "44": {
+    "character": "갫",
+    "file_path": "./screenshot/cropped\\44.jpg"
+  },
+  "45": {
+    "character": "갬",
+    "file_path": "./screenshot/cropped\\45.jpg"
+  },
+  "46": {
+    "character": "갭",
+    "file_path": "./screenshot/cropped\\46.jpg"
+  },
+  "47": {
+    "character": "갮",
+    "file_path": "./screenshot/cropped\\47.jpg"
+  },
+  "48": {
+    "character": "갯",
+    "file_path": "./screenshot/cropped\\48.jpg"
+  },
+  "49": {
+    "character": "갰",
+    "file_path": "./screenshot/cropped\\49.jpg"
+  },
+  "50": {
+    "character": "갱",
+    "file_path": "./screenshot/cropped\\50.jpg"
+  },
+  "51": {
+    "character": "갲",
+    "file_path": "./screenshot/cropped\\51.jpg"
+  },
+  "52": {
+    "character": "갳",
+    "file_path": "./screenshot/cropped\\52.jpg"
+  },
+  "53": {
+    "character": "갴",
+    "file_path": "./screenshot/cropped\\53.jpg"
+  },
+  "54": {
+    "character": "갵",
+    "file_path": "./screenshot/cropped\\54.jpg"
+  },
+  "55": {
+    "character": "갶",
+    "file_path": "./screenshot/cropped\\55.jpg"
+  },
+  "56": {
+    "character": "갷",
+    "file_path": "./screenshot/cropped\\56.jpg"
+  },
+  "57": {
+    "character": "갸",
+    "file_path": "./screenshot/cropped\\57.jpg"
+  },
+  "58": {
+    "character": "갹",
+    "file_path": "./screenshot/cropped\\58.jpg"
+  },
+  "59": {
+    "character": "갺",
+    "file_path": "./screenshot/cropped\\59.jpg"
+  },
+  "60": {
+    "character": "갻",
+    "file_path": "./screenshot/cropped\\60.jpg"
+  },
+  "61": {
+    "character": "갼",
+    "file_path": "./screenshot/cropped\\61.jpg"
+  },
+  "62": {
+    "character": "갽",
+    "file_path": "./screenshot/cropped\\62.jpg"
+  },
+  "63": {
+    "character": "갾",
+    "file_path": "./screenshot/cropped\\63.jpg"
+  },
+  "64": {
+    "character": "갿",
+    "file_path": "./screenshot/cropped\\64.jpg"
+  },
+  "65": {
+    "character": "걀",
+    "file_path": "./screenshot/cropped\\65.jpg"
+  },
+  "66": {
+    "character": "걁",
+    "file_path": "./screenshot/cropped\\66.jpg"
+  },
+  "67": {
+    "character": "걂",
+    "file_path": "./screenshot/cropped\\67.jpg"
+  },
+  "68": {
+    "character": "걃",
+    "file_path": "./screenshot/cropped\\68.jpg"
+  },
+  "69": {
+    "character": "걄",
+    "file_path": "./screenshot/cropped\\69.jpg"
+  },
+  "70": {
+    "character": "걅",
+    "file_path": "./screenshot/cropped\\70.jpg"
+  },
+  "71": {
+    "character": "걆",
+    "file_path": "./screenshot/cropped\\71.jpg"
+  },
+  "72": {
+    "character": "걇",
+    "file_path": "./screenshot/cropped\\72.jpg"
+  },
+  "73": {
+    "character": "걈",
+    "file_path": "./screenshot/cropped\\73.jpg"
+  },
+  "74": {
+    "character": "걉",
+    "file_path": "./screenshot/cropped\\74.jpg"
+  },
+  "75": {
+    "character": "걊",
+    "file_path": "./screenshot/cropped\\75.jpg"
+  },
+  "76": {
+    "character": "걋",
+    "file_path": "./screenshot/cropped\\76.jpg"
+  },
+  "77": {
+    "character": "걌",
+    "file_path": "./screenshot/cropped\\77.jpg"
+  },
+  "78": {
+    "character": "걍",
+    "file_path": "./screenshot/cropped\\78.jpg"
+  },
+  "79": {
+    "character": "걎",
+    "file_path": "./screenshot/cropped\\79.jpg"
+  },
+  "80": {
+    "character": "걏",
+    "file_path": "./screenshot/cropped\\80.jpg"
+  },
+  "81": {
+    "character": "걐",
+    "file_path": "./screenshot/cropped\\81.jpg"
+  },
+  "82": {
+    "character": "걑",
+    "file_path": "./screenshot/cropped\\82.jpg"
+  },
+  "83": {
+    "character": "걒",
+    "file_path": "./screenshot/cropped\\83.jpg"
+  },
+  "84": {
+    "character": "걓",
+    "file_path": "./screenshot/cropped\\84.jpg"
+  },
+  "85": {
+    "character": "걔",
+    "file_path": "./screenshot/cropped\\85.jpg"
+  },
+  "86": {
+    "character": "걕",
+    "file_path": "./screenshot/cropped\\86.jpg"
+  },
+  "87": {
+    "character": "걖",
+    "file_path": "./screenshot/cropped\\87.jpg"
+  },
+  "88": {
+    "character": "걗",
+    "file_path": "./screenshot/cropped\\88.jpg"
+  },
+  "89": {
+    "character": "걘",
+    "file_path": "./screenshot/cropped\\89.jpg"
+  },
+  "90": {
+    "character": "걙",
+    "file_path": "./screenshot/cropped\\90.jpg"
+  },
+  "91": {
+    "character": "걚",
+    "file_path": "./screenshot/cropped\\91.jpg"
+  },
+  "92": {
+    "character": "걛",
+    "file_path": "./screenshot/cropped\\92.jpg"
+  },
+  "93": {
+    "character": "걜",
+    "file_path": "./screenshot/cropped\\93.jpg"
+  },
+  "94": {
+    "character": "걝",
+    "file_path": "./screenshot/cropped\\94.jpg"
+  },
+  "95": {
+    "character": "걞",
+    "file_path": "./screenshot/cropped\\95.jpg"
+  },
+  "96": {
+    "character": "걟",
+    "file_path": "./screenshot/cropped\\96.jpg"
+  },
+  "97": {
+    "character": "걠",
+    "file_path": "./screenshot/cropped\\97.jpg"
+  },
+  "98": {
+    "character": "걡",
+    "file_path": "./screenshot/cropped\\98.jpg"
+  },
+  "99": {
+    "character": "걢",
+    "file_path": "./screenshot/cropped\\99.jpg"
+  },
+  "100": {
+    "character": "걣",
+    "file_path": "./screenshot/cropped\\100.jpg"
+  }
+}

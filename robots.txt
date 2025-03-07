@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-User-agent : Yeti
-Allow: /
-Crawl-delay : 10
-# robots.txt for https://lopec.kr
-# Last updated: 2024-09-28
