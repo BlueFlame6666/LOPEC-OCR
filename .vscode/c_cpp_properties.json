@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Emscripten",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/SUHUN/Desktop/emsdk/upstream/emscripten/system/include",
+                "C:/Users/SUHUN/Desktop/emsdk/upstream/emscripten/include"
+            ],
+            "defines": [],
+            "compilerPath": "C:/Users/SUHUN/Desktop/emsdk/upstream/emscripten/emcc.bat",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

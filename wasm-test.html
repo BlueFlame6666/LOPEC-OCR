@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebAssembly 템플릿 매칭 테스트</title>
+  <style>
+    .test-container {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin: 10px 0;
+    }
+    button {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>WebAssembly 템플릿 매칭 테스트</h1>
+  
+  <div id="basicTest" class="test-container">
+    <h2>기본 테스트</h2>
+    <div id="result"></div>
+  </div>
+
+  <div id="templateTest" class="test-container">
+    <h2>템플릿 매칭 테스트</h2>
+    <button id="loadTest">테스트 이미지 로드</button>
+    <div id="imageContainer" style="display: none; margin-top: 15px;">
+      <div>
+        <h3>원본 이미지</h3>
+        <canvas id="sourceCanvas"></canvas>
+      </div>
+      <div>
+        <h3>템플릿 이미지</h3>
+        <canvas id="templateCanvas"></canvas>
+      </div>
+      <div>
+        <button id="matchButton">템플릿 매칭 실행</button>
+        <div id="matchResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import WasmTemplateMatcher from './wasm-src/wasm-template-matcher.js';
+
+    async function initTests() {
+      try {
+        // 기본 WASM 모듈 테스트
+        const TemplateMatcherModule = await import('./lib/wasm/template-matcher.js');
+        const Module = await TemplateMatcherModule.default();
+        const matcher = new Module.TemplateMatcher();
+        
+        const result = matcher.add(5, 7);
+        document.getElementById('result').textContent = `웹어셈블리 테스트: 5 + 7 = ${result}`;
+        
+        console.log('WebAssembly 모듈 로드 성공!');
+        
+        // WASM 템플릿 매처 초기화
+        const wasmMatcher = new WasmTemplateMatcher();
+        await wasmMatcher.initialize();
+        
+        // 템플릿 매칭 테스트 설정
+        const loadButton = document.getElementById('loadTest');
+        const matchButton = document.getElementById('matchButton');
+        
+        loadButton.addEventListener('click', () => loadTestImages(wasmMatcher));
+        matchButton.addEventListener('click', () => runTemplateMatching(wasmMatcher));
+        
+      } catch (error) {
+        console.error('테스트 초기화 실패:', error);
+        document.getElementById('result').textContent = `오류: ${error.message}`;
+      }
+    }
+
+    // 테스트 이미지 로드
+    function loadTestImages(matcher) {
+      const sourceCanvas = document.getElementById('sourceCanvas');
+      const templateCanvas = document.getElementById('templateCanvas');
+      const sourceCtx = sourceCanvas.getContext('2d');
+      const templateCtx = templateCanvas.getContext('2d');
+      
+      // 테스트용 이미지 생성
+      sourceCanvas.width = 300;
+      sourceCanvas.height = 200;
+      sourceCtx.fillStyle = 'lightgray';
+      sourceCtx.fillRect(0, 0, 300, 200);
+      sourceCtx.fillStyle = 'blue';
+      sourceCtx.fillRect(100, 50, 50, 50);
+      
+      templateCanvas.width = 50;
+      templateCanvas.height = 50;
+      templateCtx.fillStyle = 'blue';
+      templateCtx.fillRect(0, 0, 50, 50);
+      
+      document.getElementById('imageContainer').style.display = 'block';
+    }
+
+    // 템플릿 매칭 실행
+    async function runTemplateMatching(matcher) {
+      const sourceCanvas = document.getElementById('sourceCanvas');
+      const templateCanvas = document.getElementById('templateCanvas');
+      const resultDiv = document.getElementById('matchResult');
+      
+      resultDiv.innerHTML = '매칭 중...';
+      
+      try {
+        // 여기서 WASM 모듈을 통해 템플릿 매칭을 실행
+        // WASM 모듈은 내부적으로 OpenCV.js를 사용합니다
+        const match = await matcher.findTemplateWithOpenCV(
+          sourceCanvas, 
+          templateCanvas, 
+          0.7 // 임계값
+        );
+        
+        if (match) {
+          resultDiv.innerHTML = `
+            <p style="color: green;">매칭 성공!</p>
+            <p>위치: (${match.x}, ${match.y})</p>
+            <p>크기: ${match.width}x${match.height}</p>
+            <p>신뢰도: ${(match.confidence * 100).toFixed(2)}%</p>
+          `;
+          
+          // 결과 시각화
+          const resultCanvas = document.createElement('canvas');
+          resultCanvas.width = sourceCanvas.width;
+          resultCanvas.height = sourceCanvas.height;
+          const resultCtx = resultCanvas.getContext('2d');
+          
+          // 원본 이미지 복사
+          resultCtx.drawImage(sourceCanvas, 0, 0);
+          
+          // 매칭 영역 표시
+          resultCtx.strokeStyle = 'red';
+          resultCtx.lineWidth = 2;
+          resultCtx.strokeRect(match.x, match.y, match.width, match.height);
+          
+          resultDiv.appendChild(resultCanvas);
+        } else {
+          resultDiv.innerHTML = '<p style="color: red;">매칭 실패: 임계값 이상의 매칭을 찾지 못했습니다.</p>';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p style="color: red;">오류 발생: ${error.message}</p>`;
+      }
+    }
+
+    // 초기화
+    initTests();
+  </script>
+</body>
+</html>
